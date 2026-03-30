@@ -16,8 +16,12 @@ if (!$incident || $incident['reporter_id'] != $user['id']) {
 }
 
 $attachments = $model->getAttachments($id);
-$logs        = $model->getStatusLogs($id);
+$logs         = $model->getStatusLogs($id);
 $responses   = $model->getResponses($id);
+
+// STEP 7: Get feedback data
+$feedback = $model->getFeedback($id);
+$canRate  = $incident['status'] === 'resolved' && !$feedback;
 
 $statusColor = [
     'pending'     => 'warning',
@@ -74,10 +78,8 @@ $sevColor = [
 <div class="container py-4">
     <div class="row g-4">
 
-        <!-- LEFT: Incident details -->
         <div class="col-lg-8">
 
-            <!-- Header card -->
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
@@ -114,7 +116,6 @@ $sevColor = [
                 </div>
             </div>
 
-            <!-- Map -->
             <?php if ($incident['latitude'] && $incident['longitude']): ?>
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
@@ -126,7 +127,6 @@ $sevColor = [
             </div>
             <?php endif; ?>
 
-            <!-- Attachments -->
             <?php if ($attachments): ?>
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
@@ -146,7 +146,6 @@ $sevColor = [
             </div>
             <?php endif; ?>
 
-            <!-- Responses from responder -->
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-3">
@@ -186,12 +185,65 @@ $sevColor = [
                 </div>
             </div>
 
+            <?php if ($canRate): ?>
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body p-3">
+                    <p class="small fw-medium mb-1">
+                        <i class="bi bi-star me-1"></i> I-rate ang serbisyo
+                    </p>
+                    <p class="text-muted small mb-3">
+                        Na-resolve na ang iyong report. Paano mo i-rate ang response?
+                    </p>
+                    <form action="/irms/ajax/submit_feedback.php" method="POST">
+                        <input type="hidden" name="incident_id" value="<?= $id ?>">
+                        <div class="d-flex gap-2 mb-3" id="star-container">
+                            <?php for ($s = 1; $s <= 5; $s++): ?>
+                                <input type="radio" name="rating" id="star<?= $s ?>"
+                                       value="<?= $s ?>" class="d-none" required>
+                                <label for="star<?= $s ?>" class="fs-4"
+                                       style="cursor:pointer;color:#dee2e6;"
+                                       onmouseover="highlightStars(<?= $s ?>)"
+                                       onmouseout="resetStars()"
+                                       onclick="selectStar(<?= $s ?>)">
+                                    <i class="bi bi-star-fill"></i>
+                                </label>
+                            <?php endfor; ?>
+                        </div>
+                        <div class="mb-3">
+                            <textarea name="comment" class="form-control" rows="2"
+                                placeholder="Anong masasabi mo sa response? (optional)"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning btn-sm">
+                            <i class="bi bi-send me-1"></i> I-submit ang Rating
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <?php elseif ($feedback): ?>
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body p-3">
+                    <p class="small fw-medium mb-1">
+                        <i class="bi bi-star-fill text-warning me-1"></i> Iyong Rating
+                    </p>
+                    <div class="d-flex gap-1 mb-1">
+                        <?php for ($s = 1; $s <= 5; $s++): ?>
+                            <i class="bi bi-star-fill"
+                               style="color:<?= $s <= $feedback['rating'] ? '#ffc107' : '#dee2e6' ?>"></i>
+                        <?php endfor; ?>
+                        <span class="ms-2 small text-muted"><?= $feedback['rating'] ?>/5</span>
+                    </div>
+                    <?php if ($feedback['comment']): ?>
+                        <p class="small text-muted mb-0">
+                            "<?= htmlspecialchars($feedback['comment']) ?>"
+                        </p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
         </div>
 
-        <!-- RIGHT: Status timeline + Info -->
         <div class="col-lg-4">
-
-            <!-- Assigned responder -->
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-2">
@@ -217,7 +269,6 @@ $sevColor = [
                 </div>
             </div>
 
-            <!-- Status timeline -->
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-3">
@@ -248,7 +299,6 @@ $sevColor = [
                     <?php endif; ?>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -269,6 +319,25 @@ L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>])
  .openPopup();
 </script>
 <?php endif; ?>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// STAR RATING SCRIPT
+var selectedStar = 0;
+
+function highlightStars(n) {
+    document.querySelectorAll('#star-container label').forEach(function(lbl, i) {
+        lbl.style.color = i < n ? '#ffc107' : '#dee2e6';
+    });
+}
+function resetStars() {
+    highlightStars(selectedStar);
+}
+function selectStar(n) {
+    selectedStar = n;
+    highlightStars(n);
+}
+</script>
 </body>
 </html>

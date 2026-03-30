@@ -61,7 +61,6 @@ $sevColor = [
 <body class="bg-light">
 <div class="d-flex">
 
-    <!-- Sidebar -->
     <div class="sidebar d-flex flex-column py-3">
         <div class="px-4 mb-4">
             <div class="text-white fw-semibold fs-6">
@@ -70,24 +69,19 @@ $sevColor = [
             <div class="text-secondary" style="font-size:11px;">Admin Panel</div>
         </div>
         <nav class="flex-column nav">
-            <a href="/irms/views/admin/dashboard.php"
-               class="nav-link active">
+            <a href="/irms/views/admin/dashboard.php" class="nav-link active">
                 <i class="bi bi-speedometer2 me-2"></i> Dashboard
             </a>
-            <a href="/irms/views/admin/incidents.php"
-               class="nav-link">
+            <a href="/irms/views/admin/incidents.php" class="nav-link">
                 <i class="bi bi-exclamation-triangle me-2"></i> Incidents
             </a>
-            <a href="/irms/views/admin/users.php"
-               class="nav-link">
+            <a href="/irms/views/admin/users.php" class="nav-link">
                 <i class="bi bi-people me-2"></i> Users
             </a>
-            <a href="/irms/views/admin/categories.php"
-               class="nav-link">
+            <a href="/irms/views/admin/categories.php" class="nav-link">
                 <i class="bi bi-tags me-2"></i> Categories
             </a>
-            <a href="/irms/views/admin/reports.php"
-               class="nav-link">
+            <a href="/irms/views/admin/reports.php" class="nav-link">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i> Reports
             </a>
         </nav>
@@ -96,27 +90,79 @@ $sevColor = [
                 <i class="bi bi-person-circle me-1"></i>
                 <?= htmlspecialchars($user['name']) ?>
             </div>
-            <a href="/irms/controllers/AuthController.php?action=logout"
-               class="nav-link text-danger">
+            <a href="/irms/controllers/AuthController.php?action=logout" class="nav-link text-danger">
                 <i class="bi bi-box-arrow-right me-2"></i> Logout
             </a>
         </div>
     </div>
 
-    <!-- Main content -->
     <div class="main-content">
-
-        <!-- Top nav -->
         <div class="top-nav d-flex justify-content-between align-items-center">
             <h6 class="fw-semibold mb-0">Dashboard</h6>
-            <span class="text-muted small">
-                <?= date('F d, Y') ?>
-            </span>
+            <span class="text-muted small"><?= date('F d, Y') ?></span>
         </div>
 
         <div class="p-4">
 
-            <!-- Summary cards -->
+            <?php
+            // Kunin ang incidents na malapit na o nag-breach na ng SLA
+            $slaAlerts = $pdo->query("
+                SELECT i.*, c.name AS category_name, u.name AS responder_name
+                FROM incidents i
+                JOIN categories c ON i.category_id = c.id
+                LEFT JOIN users u ON i.assigned_to = u.id
+                WHERE i.sla_deadline IS NOT NULL 
+                  AND i.status NOT IN ('resolved','closed') 
+                  AND i.sla_deadline < DATE_ADD(NOW(), INTERVAL 2 HOUR)
+                ORDER BY i.sla_deadline ASC
+                LIMIT 5
+            ")->fetchAll();
+            ?>
+
+            <?php if (!empty($slaAlerts)): ?>
+            <div class="card border-0 shadow-sm mb-4 border-start border-danger border-3">
+                <div class="card-body p-3">
+                    <p class="small fw-medium text-danger mb-2">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        SLA Alerts — <?= count($slaAlerts) ?> incident(s) need immediate attention
+                    </p>
+                    <div class="d-flex flex-column gap-2">
+                        <?php foreach ($slaAlerts as $alert):
+                            $deadline   = strtotime($alert['sla_deadline']);
+                            $minsLeft   = round(($deadline - time()) / 60);
+                            $isBreached = $minsLeft <= 0;
+                            $badgeColor = $isBreached ? 'danger' : ($minsLeft <= 30 ? 'warning' : 'info');
+                            $timeLabel  = $isBreached 
+                                ? 'BREACHED' 
+                                : ($minsLeft < 60 ? "{$minsLeft} mins left" : round($minsLeft/60,1)." hrs left");
+                        ?>
+                        <div class="d-flex align-items-center justify-content-between 
+                                    p-2 rounded border border-<?= $badgeColor ?> 
+                                    bg-<?= $isBreached ? 'danger' : 'light' ?> 
+                                    bg-opacity-10">
+                            <div>
+                                <span class="small fw-medium <?= $isBreached ? 'text-danger' : '' ?>">
+                                    #<?= $alert['id'] ?> — <?= htmlspecialchars($alert['title']) ?>
+                                </span>
+                                <span class="text-muted ms-2" style="font-size:11px;">
+                                    <?= htmlspecialchars($alert['category_name']) ?> 
+                                    · <?= $alert['responder_name'] ? htmlspecialchars($alert['responder_name']) : 'Unassigned' ?>
+                                </span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-<?= $badgeColor ?>"><?= $timeLabel ?></span>
+                                <a href="/irms/views/admin/view_incident.php?id=<?= $alert['id'] ?>" 
+                                   class="btn btn-outline-<?= $badgeColor ?> btn-sm py-0">
+                                    View
+                                </a>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="row g-3 mb-4">
                 <div class="col-6 col-xl-3">
                     <div class="card border-0 shadow-sm">
@@ -130,9 +176,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">Pending</div>
-                            <div class="fs-3 fw-bold text-warning">
-                                <?= $counts['pending'] ?>
-                            </div>
+                            <div class="fs-3 fw-bold text-warning"><?= $counts['pending'] ?></div>
                         </div>
                     </div>
                 </div>
@@ -140,9 +184,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">In Progress</div>
-                            <div class="fs-3 fw-bold text-primary">
-                                <?= $counts['in_progress'] ?>
-                            </div>
+                            <div class="fs-3 fw-bold text-primary"><?= $counts['in_progress'] ?></div>
                         </div>
                     </div>
                 </div>
@@ -150,15 +192,12 @@ $sevColor = [
                     <div class="card border-0 shadow-sm">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">Resolved</div>
-                            <div class="fs-3 fw-bold text-success">
-                                <?= $counts['resolved'] ?>
-                            </div>
+                            <div class="fs-3 fw-bold text-success"><?= $counts['resolved'] ?></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Charts row -->
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
                     <div class="card border-0 shadow-sm h-100">
@@ -178,23 +217,18 @@ $sevColor = [
                 </div>
             </div>
 
-            <!-- Map -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
-                    <p class="small fw-medium mb-2">
-                        <i class="bi bi-map me-1"></i> Incident Map
-                    </p>
+                    <p class="small fw-medium mb-2"><i class="bi bi-map me-1"></i> Incident Map</p>
                     <div id="map"></div>
                 </div>
             </div>
 
-            <!-- Recent incidents -->
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-0">
                     <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
                         <p class="small fw-medium mb-0">Recent Incidents</p>
-                        <a href="/irms/views/admin/incidents.php"
-                           class="btn btn-outline-primary btn-sm">View All</a>
+                        <a href="/irms/views/admin/incidents.php" class="btn btn-outline-primary btn-sm">View All</a>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
@@ -212,27 +246,17 @@ $sevColor = [
                                 <?php foreach ($recent as $inc): ?>
                                 <tr>
                                     <td class="ps-3 text-muted small"><?= $inc['id'] ?></td>
-                                    <td class="small fw-medium">
-                                        <?= htmlspecialchars($inc['title']) ?>
+                                    <td class="small fw-medium"><?= htmlspecialchars($inc['title']) ?></td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border small"><?= htmlspecialchars($inc['category_name']) ?></span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-light text-dark border small">
-                                            <?= htmlspecialchars($inc['category_name']) ?>
-                                        </span>
+                                        <span class="badge bg-<?= $sevColor[$inc['severity']] ?> small"><?= ucfirst($inc['severity']) ?></span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-<?= $sevColor[$inc['severity']] ?> small">
-                                            <?= ucfirst($inc['severity']) ?>
-                                        </span>
+                                        <span class="badge bg-<?= $statusColor[$inc['status']] ?> small"><?= ucwords(str_replace('_',' ',$inc['status'])) ?></span>
                                     </td>
-                                    <td>
-                                        <span class="badge bg-<?= $statusColor[$inc['status']] ?> small">
-                                            <?= ucwords(str_replace('_',' ',$inc['status'])) ?>
-                                        </span>
-                                    </td>
-                                    <td class="small text-muted">
-                                        <?= date('M d, Y', strtotime($inc['reported_at'])) ?>
-                                    </td>
+                                    <td class="small text-muted"><?= date('M d, Y', strtotime($inc['reported_at'])) ?></td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -240,14 +264,11 @@ $sevColor = [
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<!-- Leaflet -->
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -257,12 +278,7 @@ new Chart(document.getElementById('statusChart'), {
     data: {
         labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
         datasets: [{
-            data: [
-                <?= $counts['pending'] ?>,
-                <?= $counts['in_progress'] ?>,
-                <?= $counts['resolved'] ?>,
-                <?= $counts['closed'] ?>
-            ],
+            data: [<?= $counts['pending'] ?>, <?= $counts['in_progress'] ?>, <?= $counts['resolved'] ?>, <?= $counts['closed'] ?>],
             backgroundColor: ['#f59e0b','#3b82f6','#10b981','#6b7280'],
             borderWidth: 0
         }]
@@ -295,30 +311,28 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
 
-// Load markers via AJAX
 fetch('/irms/ajax/get_incidents_map.php')
 .then(function(res) { return res.json(); })
 .then(function(data) {
     data.forEach(function(inc) {
         var circle = L.circleMarker([inc.lat, inc.lng], {
-            radius: 8,
-            fillColor: inc.color,
-            color: '#fff',
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.9
+            radius: 8, fillColor: inc.color, color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
         }).addTo(map);
-
-        circle.bindPopup(
-            '<div style="min-width:180px">' +
-            '<strong style="font-size:13px;">' + inc.title + '</strong><br>' +
-            '<span style="font-size:11px;color:#666;">' + inc.location + '</span><br>' +
-            '<span class="badge" style="font-size:10px;background:' + inc.color + ';color:#fff;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;">' +
-            inc.status.replace('_',' ') + '</span>' +
-            '</div>'
-        );
+        circle.bindPopup('<div style="min-width:180px"><strong>'+inc.title+'</strong><br><span style="font-size:11px;color:#666;">'+inc.location+'</span><br><span class="badge" style="background:'+inc.color+';color:#fff;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;">'+inc.status.replace('_',' ')+'</span></div>');
     });
 });
+
+// ── STEP 6: AUTO-CHECK ESCALATIONS (60 SECONDS) ────────
+setInterval(function() {
+    fetch('/irms/ajax/check_escalations.php')
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+        if (data.escalated > 0) {
+            location.reload();
+        }
+    })
+    .catch(function() {});
+}, 60000);
 </script>
 </body>
 </html>
