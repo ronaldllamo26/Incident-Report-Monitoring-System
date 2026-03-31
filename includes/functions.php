@@ -1,29 +1,17 @@
 <?php
 
-/**
- * Sanitize output — always use this when displaying user input
- */
 function e(string $str): string {
     return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
 }
 
-/**
- * Format date
- */
 function formatDate(string $date, string $format = 'M d, Y'): string {
     return date($format, strtotime($date));
 }
 
-/**
- * Format datetime
- */
 function formatDateTime(string $date): string {
     return date('M d, Y g:i A', strtotime($date));
 }
 
-/**
- * Get status badge HTML
- */
 function statusBadge(string $status): string {
     $colors = [
         'pending'     => 'warning',
@@ -36,9 +24,6 @@ function statusBadge(string $status): string {
     return "<span class=\"badge bg-{$color}\">{$label}</span>";
 }
 
-/**
- * Get severity badge HTML
- */
 function severityBadge(string $severity): string {
     $colors = [
         'low'      => 'success',
@@ -50,19 +35,46 @@ function severityBadge(string $severity): string {
     return "<span class=\"badge bg-{$color}\">" . ucfirst($severity) . "</span>";
 }
 
-/**
- * Truncate text
- */
 function truncate(string $text, int $length = 50): string {
     return strlen($text) > $length
         ? substr($text, 0, $length) . '...'
         : $text;
 }
 
-/**
- * Redirect with message
- */
 function redirectWith(string $url, string $type, string $msg): void {
     header('Location: ' . $url . '?' . $type . '=' . urlencode($msg));
     exit;
+}
+
+/**
+ * Log an action sa audit_logs table
+ */
+function logAudit(
+    PDO    $pdo,
+    ?int   $userId,
+    string $action,
+    string $targetType = null,
+    int    $targetId   = null,
+    string $details    = null
+): void {
+    try {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR']
+            ?? $_SERVER['REMOTE_ADDR']
+            ?? null;
+
+        $pdo->prepare("
+            INSERT INTO audit_logs
+                (user_id, action, target_type, target_id, details, ip_address)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ")->execute([$userId, $action, $targetType, $targetId, $details, $ip]);
+    } catch (Exception $e) {
+        // Hindi papigilan ang system kahit mag-fail ang audit log
+    }
+}
+
+/**
+ * Generate tracking number
+ */
+function generateTracking(): string {
+    return 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 }

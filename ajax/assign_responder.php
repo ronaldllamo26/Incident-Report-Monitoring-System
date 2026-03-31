@@ -8,7 +8,7 @@ $incidentId = (int)($_POST['incident_id']  ?? 0);
 $responderId = (int)($_POST['responder_id'] ?? 0);
 
 if (!$incidentId) {
-    header('Location: /irms/views/admin/incidents.php?error=Invalid+incident.');
+    header('Location: /irms/portal/admin/incidents.php?error=Invalid+incident.');
     exit;
 }
 
@@ -21,6 +21,6 @@ if ($responderId) {
         ->execute([$incidentId]);
 }
 
-header('Location: /irms/views/admin/incidents.php?success=' .
+header('Location: /irms/portal/admin/incidents.php?success=' .
        urlencode('Na-update na ang assignment.'));
 exit;

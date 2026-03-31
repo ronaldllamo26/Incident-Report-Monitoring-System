@@ -18,12 +18,12 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $lng      = $_POST['longitude']         ?? null;
 
     if (!$title || !$cat || !$severity || !$desc || !$location) {
-        header('Location: /irms/views/citizen/report.php?error=' .
+        header('Location: /irms/citizen/report.php?error=' .
                urlencode('Punan ang lahat ng required fields.'));
         exit;
     }
     if (!$lat || !$lng) {
-        header('Location: /irms/views/citizen/report.php?error=' .
+        header('Location: /irms/citizen/report.php?error=' .
                urlencode('I-pin muna ang lokasyon sa mapa.'));
         exit;
     }
@@ -71,12 +71,43 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // sa IncidentController.php
+
+require_once __DIR__ . '/../config/mailer.php';
+
+// Kunin ang full incident details para sa email
+$fullIncident = $model->getById($incidentId);
+
+// 1. Confirmation email sa citizen
+if ($fullIncident && !empty($fullIncident['reporter_email'])) {
+    sendMail(
+        $fullIncident['reporter_email'],
+        'Report Confirmation — IRMS #' . $incidentId,
+        mailReportConfirmation($fullIncident)
+    );
+}
+
+// 2. Notification sa assigned responder (kung may default)
+if ($fullIncident && $fullIncident['assigned_to']) {
+    $responderStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+    $responderStmt->execute([$fullIncident['assigned_to']]);
+    $responder = $responderStmt->fetch();
+
+    if ($responder) {
+        sendMail(
+            $responder['email'],
+            '🚨 Bagong Assigned Incident #' . $incidentId . ' — ' . $fullIncident['title'],
+            mailResponderAssigned($fullIncident, $responder)
+        );
+    }
+}
+
     // Initial status log
     $pdo->prepare("
         INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
         VALUES (?, ?, NULL, 'pending', 'Incident submitted by citizen.')
     ")->execute([$incidentId, $user['id']]);
 
-    header('Location: /irms/views/citizen/dashboard.php?success=submitted');
+    header('Location: /irms/citizen/dashboard.php?success=submitted');
     exit;
 }

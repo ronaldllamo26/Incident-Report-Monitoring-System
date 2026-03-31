@@ -81,7 +81,7 @@ class AuthController {
         ]);
 
         if ($created) {
-            header('Location: /irms/views/auth/login.php?success=registered');
+            header('Location: /irms/citizen/login.php?success=registered');
         } else {
             $this->redirectWithError('register', 'May error sa pagre-register. Subukan ulit.');
         }
@@ -90,12 +90,12 @@ class AuthController {
 
     public function logout(): void {
         session_destroy();
-        header('Location: /irms/views/auth/login.php');
+        header('Location: /irms/citizen/login.php');
         exit;
     }
 
     private function redirectWithError(string $page, string $msg): void {
-        header('Location: /irms/views/auth/' . $page . '.php?error=' . urlencode($msg));
+        header('Location: /irms/citizen/' . $page . '.php?error=' . urlencode($msg));
         exit;
     }
 }
