@@ -4,7 +4,7 @@ require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /irms/citizen/anonymous_report.php');
+    header('Location: /irms/public/anonymous_report.php');
     exit;
 }
 
@@ -21,19 +21,19 @@ $anonPhone = trim($_POST['anon_phone']  ?? '');
 
 // Validation
 if (!$title || !$cat || !$severity || !$desc || !$location) {
-    header('Location: /irms/citizen/anonymous_report.php?error=' .
+    header('Location: /irms/public/anonymous_report.php?error=' .
            urlencode('Punan ang lahat ng required fields.'));
     exit;
 }
 
 if (!$lat || !$lng) {
-    header('Location: /irms/citizen/anonymous_report.php?error=' .
+    header('Location: /irms/public/anonymous_report.php?error=' .
            urlencode('I-pin muna ang lokasyon sa mapa.'));
     exit;
 }
 
 if ($anonEmail && !filter_var($anonEmail, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /irms/citizen/anonymous_report.php?error=' .
+    header('Location: /irms/public/anonymous_report.php?error=' .
            urlencode('Hindi valid ang email address.'));
     exit;
 }

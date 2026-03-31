@@ -1,8 +1,8 @@
 <?php
 
-require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
 requireRole('admin');
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 $success = $_GET['success'] ?? '';
 $error   = $_GET['error']   ?? '';
@@ -106,7 +106,7 @@ $roleColor = [
             </div>
             <div class="text-secondary" style="font-size:11px;">Admin Panel</div>
         </div>
-        <nav class="flex-column nav">
+         <nav class="flex-column nav">
     <a href="/irms/portal/admin/dashboard.php" class="nav-link">
         <i class="bi bi-speedometer2 me-2"></i> Dashboard
     </a>

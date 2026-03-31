@@ -1,11 +1,11 @@
 <?php
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../config/db.php';
 
 $tracking = $_GET['tracking'] ?? '';
 $id       = (int)($_GET['id'] ?? 0);
 
 if (!$tracking || !$id) {
-    header('Location: /irms/citizen/anonymous_report.php');
+    header('Location: /irms/public/anonymous_report.php');
     exit;
 }
 
@@ -15,7 +15,7 @@ $stmt->execute([$tracking, $id]);
 $incident = $stmt->fetch();
 
 if (!$incident) {
-    header('Location: /irms/citizen/anonymous_report.php');
+    header('Location: /irms/public/anonymous_report.php');
     exit;
 }
 ?>
@@ -152,7 +152,7 @@ if (!$incident) {
                    class="btn btn-primary flex-fill">
                     <i class="bi bi-search me-1"></i> I-track ang Report
                 </a>
-                <a href="/irms/citizen/anonymous_report.php"
+                <a href="/irms/public/anonymous_report.php"
                    class="btn btn-outline-secondary">
                     Mag-report pa
                 </a>

@@ -14,6 +14,9 @@ class AuthController {
 
         $email    = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
+        
+        // Kunin ang portal type (galing sa hidden input ng login form)
+        $portal = $_POST['portal'] ?? $_GET['portal'] ?? '';
 
         // Basic validation
         if (empty($email) || empty($password)) {
@@ -27,6 +30,23 @@ class AuthController {
             $this->redirectWithError('login', 'Mali ang email o password.');
             return;
         }
+
+        // --- START NG PORTAL VALIDATION LOGIC ---
+
+        // 1. Kung nasa Staff Portal login pero ang role ay 'citizen' — i-block.
+        if ($portal === 'staff' && $user['role'] === 'citizen') {
+            $this->redirectWithError('login', 'Walang access sa Staff Portal.', 'portal');
+            return;
+        }
+
+        // 2. Kung nasa Citizen login pero ang role ay Staff (admin/responder) 
+        // — i-redirect sila sa tamang login page ng portal.
+        if ($portal !== 'staff' && in_array($user['role'], ['admin', 'responder'])) {
+            header('Location: /irms/portal/login.php?error=' . urlencode('Dito ka dapat mag-login sa Staff Portal.'));
+            exit;
+        }
+
+        // --- END NG PORTAL VALIDATION LOGIC ---
 
         // Set session
         $_SESSION['user_id'] = $user['id'];
@@ -89,15 +109,19 @@ class AuthController {
     }
 
     public function logout(): void {
-        session_destroy();
-        header('Location: /irms/citizen/login.php');
-        exit;
-    }
+    session_destroy();
+    header('Location: /irms/index.php');
+    exit;
+}
 
-    private function redirectWithError(string $page, string $msg): void {
-        header('Location: /irms/citizen/' . $page . '.php?error=' . urlencode($msg));
-        exit;
-    }
+    /**
+     * Modified redirect helper para ma-handle kung staff or citizen ang error redirection
+     */
+    private function redirectWithError(string $page, string $msg, string $type = 'citizen'): void {
+    $path = $type === 'portal' ? '/irms/portal/' : '/irms/citizen/';
+    header('Location: ' . $path . $page . '.php?error=' . urlencode($msg));
+    exit;
+}
 }
 
 // Route based on action

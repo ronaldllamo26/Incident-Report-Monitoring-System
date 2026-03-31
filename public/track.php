@@ -62,7 +62,7 @@ $sevColor = [
             <i class="bi bi-shield-check me-2"></i>IRMS
         </div>
         <div class="d-flex gap-2">
-            <a href="/irms/citizen/anonymous_report.php"
+            <a href="/irms/public/anonymous_report.php"
                class="btn btn-outline-light btn-sm">
                 <i class="bi bi-plus-lg me-1"></i> Mag-report
             </a>

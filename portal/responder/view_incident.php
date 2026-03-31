@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
 requireRole('responder');
-require_once __DIR__ . '/../../config/db.php';
-require_once __DIR__ . '/../../models/Incident.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../models/Incident.php';
 
 $user     = currentUser();
 $id       = (int)($_GET['id'] ?? 0);

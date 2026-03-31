@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';  // para sa citizen/ at portal/
-require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../config/db.php';
 
 // Pag naka-login na, i-redirect sa normal report form
 if (isLoggedIn()) {
