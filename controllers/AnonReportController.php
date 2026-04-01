@@ -67,7 +67,7 @@ $model->processNewIncident($incidentId, $cat, $severity);
 // Initial status log (user_id = NULL kasi anonymous)
 $pdo->prepare("
     INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
-    VALUES (?, 1, NULL, 'pending', 'Anonymous incident report submitted.')
+    VALUES (?, NULL, NULL, 'pending', 'Anonymous incident report submitted.')
 ")->execute([$incidentId]);
 
 // Handle photo uploads
@@ -98,6 +98,6 @@ logAudit($pdo, null, 'anonymous_report_submitted', 'incident', $incidentId,
     "Anonymous report submitted. Tracking: {$tracking}");
 
 // Redirect sa success page na may tracking number
-header('Location: /irms/citizen/report_success.php?tracking=' .
+header('Location: /irms/public/report_success.php?tracking=' .
        urlencode($tracking) . '&id=' . $incidentId);
 exit;

@@ -9,8 +9,6 @@ class Incident {
         $this->pdo = $pdo;
     }
 
-    // ── EXISTING METHODS (unchanged) ──────────────────
-
     public function getByReporter(int $userId): array {
         $stmt = $this->pdo->prepare("
             SELECT i.*, c.name AS category_name
@@ -25,15 +23,16 @@ class Incident {
 
     public function getById(int $id): array|false {
         $stmt = $this->pdo->prepare("
-            SELECT i.*, c.name AS category_name,
+            SELECT i.*,
+                   c.name AS category_name,
                    c.sla_critical, c.sla_high, c.sla_medium, c.sla_low,
-                   u.name  AS reporter_name,
-                   u.email AS reporter_email,
-                   u.phone AS reporter_phone,
-                   a.name  AS responder_name
+                   COALESCE(u.name,  i.anon_name,  'Anonymous') AS reporter_name,
+                   COALESCE(u.email, i.anon_email, '')          AS reporter_email,
+                   COALESCE(u.phone, i.anon_phone, '')          AS reporter_phone,
+                   a.name AS responder_name
             FROM incidents i
             JOIN categories c ON i.category_id = c.id
-            JOIN users u ON i.reporter_id = u.id
+            LEFT JOIN users u ON i.reporter_id = u.id
             LEFT JOIN users a ON i.assigned_to = a.id
             WHERE i.id = ?
         ");
@@ -51,12 +50,13 @@ class Incident {
         if (!empty($filters['assigned_to'])) { $where[] = 'i.assigned_to = ?'; $params[] = $filters['assigned_to']; }
 
         $sql = "
-            SELECT i.*, c.name AS category_name,
-                   u.name AS reporter_name,
+            SELECT i.*,
+                   c.name AS category_name,
+                   COALESCE(u.name, i.anon_name, 'Anonymous') AS reporter_name,
                    a.name AS responder_name
             FROM incidents i
             JOIN categories c ON i.category_id = c.id
-            JOIN users u ON i.reporter_id = u.id
+            LEFT JOIN users u ON i.reporter_id = u.id
             LEFT JOIN users a ON i.assigned_to = a.id
         ";
         if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
@@ -77,7 +77,7 @@ class Incident {
         $stmt = $this->pdo->prepare("
             SELECT sl.*, u.name AS changed_by_name
             FROM status_logs sl
-            JOIN users u ON sl.changed_by = u.id
+            LEFT JOIN users u ON sl.changed_by = u.id
             WHERE sl.incident_id = ?
             ORDER BY sl.changed_at ASC
         ");
@@ -102,7 +102,6 @@ class Incident {
             UPDATE incidents SET status = ?, updated_at = NOW() WHERE id = ?
         ")->execute([$newStatus, $incidentId]);
 
-        // Mark acknowledged_at pag first time nag-respond ang responder
         if ($oldStatus === 'pending' && $newStatus === 'in_progress') {
             $this->pdo->prepare("
                 UPDATE incidents SET acknowledged_at = NOW() WHERE id = ? AND acknowledged_at IS NULL
@@ -147,14 +146,7 @@ class Incident {
         return $stmt->fetchAll();
     }
 
-    // ── NEW METHODS ────────────────────────────────────
-
-    /**
-     * Auto-assign responder + compute SLA deadline + set priority
-     * Tinatawag agad pagkatapos mag-INSERT ng bagong incident
-     */
     public function processNewIncident(int $incidentId, int $categoryId, string $severity): void {
-        // Kunin ang category defaults
         $cat = $this->pdo->prepare("
             SELECT default_responder_id, sla_critical, sla_high, sla_medium, sla_low
             FROM categories WHERE id = ?
@@ -164,7 +156,6 @@ class Incident {
 
         if (!$category) return;
 
-        // Compute SLA deadline (in minutes)
         $slaMinutes = match($severity) {
             'critical' => (int)$category['sla_critical'],
             'high'     => (int)$category['sla_high'],
@@ -172,7 +163,6 @@ class Incident {
             default    => (int)$category['sla_low'],
         };
 
-        // Priority level (1=highest, 4=lowest)
         $priority = match($severity) {
             'critical' => 1,
             'high'     => 2,
@@ -180,32 +170,29 @@ class Incident {
             default    => 4,
         };
 
-        $slaDeadline     = date('Y-m-d H:i:s', time() + ($slaMinutes * 60));
+        $slaDeadline      = date('Y-m-d H:i:s', time() + ($slaMinutes * 60));
         $defaultResponder = $category['default_responder_id'];
 
-        // Update incident
         $stmt = $this->pdo->prepare("
             UPDATE incidents
-            SET sla_deadline  = ?,
-                priority      = ?,
-                assigned_to   = COALESCE(?, assigned_to)
+            SET sla_deadline = ?,
+                priority     = ?,
+                assigned_to  = COALESCE(?, assigned_to)
             WHERE id = ?
         ");
         $stmt->execute([$slaDeadline, $priority, $defaultResponder, $incidentId]);
     }
 
-    /**
-     * Kunin ang lahat ng incidents na nag-breach ng SLA at hindi pa escalated
-     */
     public function getBreachedUnescalated(): array {
         $stmt = $this->pdo->query("
-            SELECT i.*, c.name AS category_name,
-                   u.name AS reporter_name,
+            SELECT i.*,
+                   c.name AS category_name,
+                   COALESCE(u.name, i.anon_name, 'Anonymous') AS reporter_name,
                    a.name AS responder_name,
-                   u.email AS reporter_email
+                   COALESCE(u.email, i.anon_email) AS reporter_email
             FROM incidents i
             JOIN categories c ON i.category_id = c.id
-            JOIN users u ON i.reporter_id = u.id
+            LEFT JOIN users u ON i.reporter_id = u.id
             LEFT JOIN users a ON i.assigned_to = a.id
             WHERE i.sla_deadline < NOW()
               AND i.status NOT IN ('resolved','closed')
@@ -214,20 +201,12 @@ class Incident {
         return $stmt->fetchAll();
     }
 
-    /**
-     * Mark as escalated + breached
-     */
     public function markEscalated(int $incidentId): void {
         $this->pdo->prepare("
-            UPDATE incidents
-            SET escalated = 1, sla_breached = 1
-            WHERE id = ?
+            UPDATE incidents SET escalated = 1, sla_breached = 1 WHERE id = ?
         ")->execute([$incidentId]);
     }
 
-    /**
-     * Kunin ang feedback ng isang incident
-     */
     public function getFeedback(int $incidentId): array|false {
         $stmt = $this->pdo->prepare("
             SELECT f.*, u.name AS citizen_name
@@ -239,9 +218,6 @@ class Incident {
         return $stmt->fetch();
     }
 
-    /**
-     * Submit feedback
-     */
     public function submitFeedback(int $incidentId, int $citizenId, int $rating, string $comment): bool {
         $stmt = $this->pdo->prepare("
             INSERT INTO feedback (incident_id, citizen_id, rating, comment)
@@ -251,11 +227,7 @@ class Incident {
         return $stmt->execute([$incidentId, $citizenId, $rating, $comment]);
     }
 
-    /**
-     * Responder performance stats
-     */
     public function getResponderStats(int $responderId): array {
-        // Average response time (minutes)
         $avgStmt = $this->pdo->prepare("
             SELECT AVG(TIMESTAMPDIFF(MINUTE, reported_at, acknowledged_at)) AS avg_response
             FROM incidents
@@ -264,7 +236,6 @@ class Incident {
         $avgStmt->execute([$responderId]);
         $avg = $avgStmt->fetch();
 
-        // Resolved count
         $resolvedStmt = $this->pdo->prepare("
             SELECT COUNT(*) AS count FROM incidents
             WHERE assigned_to = ? AND status IN ('resolved','closed')
@@ -272,7 +243,6 @@ class Incident {
         $resolvedStmt->execute([$responderId]);
         $resolved = $resolvedStmt->fetch();
 
-        // Average rating
         $ratingStmt = $this->pdo->prepare("
             SELECT AVG(f.rating) AS avg_rating
             FROM feedback f
@@ -289,10 +259,6 @@ class Incident {
         ];
     }
 
-    /**
-     * Get SLA status ng isang incident
-     * Returns: 'ok', 'warning' (75% ng time consumed), 'breached'
-     */
     public function getSlaStatus(array $incident): array {
         if (!$incident['sla_deadline']) {
             return ['status' => 'none', 'label' => 'No SLA', 'minutes_left' => null];
@@ -310,23 +276,23 @@ class Incident {
 
         if ($left <= 0) {
             return [
-                'status'      => 'breached',
-                'label'       => 'SLA Breached!',
+                'status'       => 'breached',
+                'label'        => 'SLA Breached!',
                 'minutes_left' => 0,
-                'percent'     => 100,
+                'percent'      => 100,
             ];
         }
 
-        $percent = round((1 - ($left / $total)) * 100);
+        $percent  = round((1 - ($left / $total)) * 100);
         $minsLeft = round($left / 60);
 
         return [
-            'status'      => $percent >= 75 ? 'warning' : 'ok',
-            'label'       => $minsLeft < 60
+            'status'       => $percent >= 75 ? 'warning' : 'ok',
+            'label'        => $minsLeft < 60
                 ? "{$minsLeft} mins left"
                 : round($minsLeft / 60, 1) . ' hrs left',
             'minutes_left' => $minsLeft,
-            'percent'     => $percent,
+            'percent'      => $percent,
         ];
     }
 }

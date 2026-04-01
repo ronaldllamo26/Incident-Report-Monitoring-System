@@ -39,6 +39,13 @@ if ($action === 'update_status') {
 
     $model->updateStatus($id, $newStatus, $user['id'], $oldStatus, $remarks);
 
+    // ── ACKNOWLEDGE TIMESTAMP ──────────────────
+    if ($newStatus === 'in_progress' && $oldStatus === 'pending') {
+        $pdo->prepare("UPDATE incidents SET acknowledged_at = NOW() WHERE id = ?")
+            ->execute([$id]);
+    }
+    // ──────────────────────────────────────────
+
     // ── EMAIL NOTIFICATION ─────────────────────
     $fullIncident = $model->getById($id);
 

@@ -49,7 +49,7 @@ $error = $_GET['error'] ?? '';
             </span>
         </div>
         <div class="d-flex gap-2">
-            <a href="/irms/citizen/track.php"
+            <a href="/irms/public/track.php"
                class="btn btn-outline-light btn-sm">
                 <i class="bi bi-search me-1"></i> I-track ang Report
             </a>

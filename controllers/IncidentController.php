@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../models/Incident.php';
+require_once __DIR__ . '/../config/mailer.php';
 requireRole('citizen');
 
 $action = $_GET['action'] ?? '';
@@ -28,20 +29,23 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Generate tracking number
+    $tracking = 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+
     // Insert incident
     $stmt = $pdo->prepare("
         INSERT INTO incidents
             (reporter_id, category_id, title, description,
-             location, latitude, longitude, severity, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+             location, latitude, longitude, severity, status, tracking_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
     ");
     $stmt->execute([
         $user['id'], $cat, $title, $desc,
-        $location, $lat, $lng, $severity
+        $location, $lat, $lng, $severity, $tracking
     ]);
-    $incidentId = $pdo->lastInsertId();
+    $incidentId = $pdo->lastInsertId(); // ← DITO DAPAT ITO
 
-    // ✅ AUTO-ASSIGN + SLA + PRIORITY
+    // Auto-assign + SLA + Priority
     $model = new Incident();
     $model->processNewIncident($incidentId, $cat, $severity);
 
@@ -57,11 +61,10 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $filename = uniqid('inc_', true) . '.' . $ext;
             if (move_uploaded_file($tmp, $uploadDir . $filename)) {
-                $s = $pdo->prepare("
+                $pdo->prepare("
                     INSERT INTO attachments (incident_id, file_name, file_path, file_type)
                     VALUES (?, ?, ?, ?)
-                ");
-                $s->execute([
+                ")->execute([
                     $incidentId,
                     $_FILES['photos']['name'][$i],
                     'uploads/' . $filename,
@@ -71,43 +74,38 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // sa IncidentController.php
-
-require_once __DIR__ . '/../config/mailer.php';
-
-// Kunin ang full incident details para sa email
-$fullIncident = $model->getById($incidentId);
-
-// 1. Confirmation email sa citizen
-if ($fullIncident && !empty($fullIncident['reporter_email'])) {
-    sendMail(
-        $fullIncident['reporter_email'],
-        'Report Confirmation — IRMS #' . $incidentId,
-        mailReportConfirmation($fullIncident)
-    );
-}
-
-// 2. Notification sa assigned responder (kung may default)
-if ($fullIncident && $fullIncident['assigned_to']) {
-    $responderStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-    $responderStmt->execute([$fullIncident['assigned_to']]);
-    $responder = $responderStmt->fetch();
-
-    if ($responder) {
-        sendMail(
-            $responder['email'],
-            '🚨 Bagong Assigned Incident #' . $incidentId . ' — ' . $fullIncident['title'],
-            mailResponderAssigned($fullIncident, $responder)
-        );
-    }
-}
-
     // Initial status log
     $pdo->prepare("
         INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
         VALUES (?, ?, NULL, 'pending', 'Incident submitted by citizen.')
     ")->execute([$incidentId, $user['id']]);
 
-    header('Location: /irms/citizen/dashboard.php?success=submitted');
+    // Email notifications
+    $fullIncident = $model->getById($incidentId);
+
+    if ($fullIncident && !empty($fullIncident['reporter_email'])) {
+        sendMail(
+            $fullIncident['reporter_email'],
+            'Report Confirmation — IRMS #' . $incidentId,
+            mailReportConfirmation($fullIncident, $tracking)
+        );
+    }
+
+    if ($fullIncident && $fullIncident['assigned_to']) {
+        $responderStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+        $responderStmt->execute([$fullIncident['assigned_to']]);
+        $responder = $responderStmt->fetch();
+
+        if ($responder) {
+            sendMail(
+                $responder['email'],
+                '🚨 Bagong Assigned Incident #' . $incidentId . ' — ' . $fullIncident['title'],
+                mailResponderAssigned($fullIncident, $responder)
+            );
+        }
+    }
+
+    header('Location: /irms/public/report_success.php?tracking=' .
+           urlencode($tracking) . '&id=' . $incidentId);
     exit;
 }

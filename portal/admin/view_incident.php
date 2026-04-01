@@ -1,9 +1,8 @@
 <?php
-
-require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../../includes/auth.php';
 requireRole('admin');
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../models/Incident.php';
+require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../models/Incident.php';
 
 $user     = currentUser();
 $id       = (int)($_GET['id'] ?? 0);
@@ -46,14 +45,8 @@ $error   = $_GET['error']   ?? '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
+    <?php include __DIR__ . '/../../includes/sidebar_style.php'; ?>
     <style>
-        .sidebar { width: 220px; min-height: 100vh; background: #1e293b; }
-        .sidebar .nav-link { color: #94a3b8; font-size: 14px; padding: 10px 20px;
-                             border-radius: 6px; margin: 2px 8px; }
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active { background: #334155; color: #fff; }
-        .main-content { flex: 1; overflow-y: auto; }
-        .top-nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; }
         #map { height: 220px; border-radius: 8px; border: 1px solid #dee2e6; }
         .timeline { position: relative; padding-left: 24px; }
         .timeline::before { content:''; position:absolute; left:7px; top:0; bottom:0;
@@ -72,52 +65,24 @@ $error   = $_GET['error']   ?? '';
 <body class="bg-light">
 <div class="d-flex">
 
-    <!-- Sidebar -->
-    <div class="sidebar d-flex flex-column py-3">
-        <div class="px-4 mb-4">
-            <div class="text-white fw-semibold fs-6">
-                <i class="bi bi-shield-check me-2"></i>IRMS
-            </div>
-            <div class="text-secondary" style="font-size:11px;">Admin Panel</div>
-        </div>
-        <nav class="flex-column nav">
-    <a href="/irms/portal/admin/dashboard.php" class="nav-link">
-        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-    </a>
-    <a href="/irms/portal/admin/incidents.php" class="nav-link">
-        <i class="bi bi-exclamation-triangle me-2"></i> Incidents
-    </a>
-    <a href="/irms/portal/admin/users.php" class="nav-link active">
-        <i class="bi bi-people me-2"></i> Users
-    </a>
-    <a href="/irms/portal/admin/categories.php" class="nav-link">
-        <i class="bi bi-tags me-2"></i> Categories
-    </a>
-    <a href="/irms/portal/admin/reports.php" class="nav-link">
-        <i class="bi bi-file-earmark-bar-graph me-2"></i> Reports
-    </a>
-</nav>
-        <div class="mt-auto px-3">
-            <div class="text-secondary small px-2 mb-2">
-                <i class="bi bi-person-circle me-1"></i>
-                <?= htmlspecialchars($_SESSION['name']) ?>
-            </div>
-            <a href="/irms/controllers/AuthController.php?action=logout"
-               class="nav-link text-danger">
-                <i class="bi bi-box-arrow-right me-2"></i> Logout
-            </a>
-        </div>
-    </div>
+    <?php include __DIR__ . '/../../includes/sidebar_admin.php'; ?>
 
-    <!-- Main -->
     <div class="main-content">
         <div class="top-nav d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-2">
-                <a href="/irms/portal/admin/incidents.php"
-                   class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <h6 class="fw-semibold mb-0">Incident #<?= $id ?></h6>
+            <div class="d-flex align-items-center gap-3">
+                <button class="hamburger btn btn-sm btn-outline-secondary"
+                        style="display:none;align-items:center;justify-content:center;
+                               width:36px;height:36px;padding:0;"
+                        onclick="toggleSidebar()">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/irms/portal/admin/incidents.php"
+                       class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    <h6 class="fw-semibold mb-0">Incident #<?= $id ?></h6>
+                </div>
             </div>
             <span class="badge bg-<?= $statusColor[$incident['status']] ?>">
                 <?= ucwords(str_replace('_',' ',$incident['status'])) ?>
@@ -144,7 +109,6 @@ $error   = $_GET['error']   ?? '';
                 <!-- LEFT -->
                 <div class="col-lg-8">
 
-                    <!-- Incident details -->
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body p-4">
                             <h5 class="fw-semibold mb-3">
@@ -177,7 +141,6 @@ $error   = $_GET['error']   ?? '';
                         </div>
                     </div>
 
-                    <!-- Map -->
                     <?php if ($incident['latitude'] && $incident['longitude']): ?>
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body p-3">
@@ -189,7 +152,6 @@ $error   = $_GET['error']   ?? '';
                     </div>
                     <?php endif; ?>
 
-                    <!-- Attachments -->
                     <?php if ($attachments): ?>
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body p-3">
@@ -210,7 +172,6 @@ $error   = $_GET['error']   ?? '';
                     </div>
                     <?php endif; ?>
 
-                    <!-- Admin response form -->
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body p-3">
                             <p class="small fw-medium mb-2">
@@ -229,7 +190,6 @@ $error   = $_GET['error']   ?? '';
                         </div>
                     </div>
 
-                    <!-- Responses -->
                     <?php if ($responses): ?>
                     <div class="card border-0 shadow-sm">
                         <div class="card-body p-3">
@@ -251,8 +211,7 @@ $error   = $_GET['error']   ?? '';
                                                 <?= htmlspecialchars($r['responder_name']) ?>
                                             </span>
                                             <span class="text-muted" style="font-size:11px;">
-                                                <?= date('M d, Y g:i A',
-                                                    strtotime($r['responded_at'])) ?>
+                                                <?= date('M d, Y g:i A', strtotime($r['responded_at'])) ?>
                                             </span>
                                         </div>
                                         <div class="chat-bubble ms-4">
@@ -278,19 +237,35 @@ $error   = $_GET['error']   ?? '';
                             <p class="small fw-medium mb-2">
                                 <i class="bi bi-arrow-repeat me-1"></i> I-update ang Status
                             </p>
+
+                            <?php if ($incident['status'] === 'resolved'): ?>
+                            <div class="alert alert-success py-2 small mb-2">
+                                <i class="bi bi-check-circle me-1"></i>
+                                Na-resolve na — pwede mo nang i-close.
+                            </div>
                             <form action="/irms/ajax/update_status.php" method="POST">
                                 <input type="hidden" name="incident_id" value="<?= $id ?>">
                                 <input type="hidden" name="action" value="update_status">
-                                <input type="hidden" name="old_status"
-                                       value="<?= $incident['status'] ?>">
+                                <input type="hidden" name="old_status" value="resolved">
+                                <input type="hidden" name="new_status" value="closed">
+                                <textarea name="remarks" class="form-control form-control-sm mb-2"
+                                    rows="2" placeholder="Closing remarks (optional)..."></textarea>
+                                <button type="submit" class="btn btn-secondary btn-sm w-100"
+                                        onclick="return confirm('I-close na ang incident?')">
+                                    <i class="bi bi-lock me-1"></i> I-Close ang Incident
+                                </button>
+                            </form>
+
+                            <?php elseif ($incident['status'] !== 'closed'): ?>
+                            <form action="/irms/ajax/update_status.php" method="POST">
+                                <input type="hidden" name="incident_id" value="<?= $id ?>">
+                                <input type="hidden" name="action" value="update_status">
+                                <input type="hidden" name="old_status" value="<?= $incident['status'] ?>">
                                 <div class="mb-2">
-                                    <select name="new_status"
-                                            class="form-select form-select-sm" required>
+                                    <select name="new_status" class="form-select form-select-sm" required>
                                         <option value="">-- Piliin ang bagong status --</option>
-                                        <?php
-                                        foreach (['pending','in_progress','resolved','closed'] as $s):
-                                            if ($s === $incident['status']) continue;
-                                        ?>
+                                        <?php foreach (['pending','in_progress','resolved','closed'] as $s):
+                                            if ($s === $incident['status']) continue; ?>
                                             <option value="<?= $s ?>">
                                                 <?= ucwords(str_replace('_',' ',$s)) ?>
                                             </option>
@@ -305,6 +280,12 @@ $error   = $_GET['error']   ?? '';
                                     <i class="bi bi-check2 me-1"></i> I-update
                                 </button>
                             </form>
+
+                            <?php else: ?>
+                            <div class="alert alert-secondary py-2 small mb-0">
+                                <i class="bi bi-lock me-1"></i> Closed na ang incident na ito.
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -321,8 +302,7 @@ $error   = $_GET['error']   ?? '';
                                         <option value="">-- Unassigned --</option>
                                         <?php foreach ($responders as $r): ?>
                                             <option value="<?= $r['id'] ?>"
-                                                <?= $incident['assigned_to'] == $r['id']
-                                                    ? 'selected' : '' ?>>
+                                                <?= $incident['assigned_to'] == $r['id'] ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($r['name']) ?>
                                             </option>
                                         <?php endforeach; ?>
@@ -345,14 +325,21 @@ $error   = $_GET['error']   ?? '';
                                 <div class="fw-medium mb-1">
                                     <?= htmlspecialchars($incident['reporter_name']) ?>
                                 </div>
+                                <?php if ($incident['reporter_email']): ?>
                                 <div class="text-muted">
                                     <i class="bi bi-envelope me-1"></i>
                                     <?= htmlspecialchars($incident['reporter_email']) ?>
                                 </div>
+                                <?php endif; ?>
                                 <?php if ($incident['reporter_phone']): ?>
                                 <div class="text-muted mt-1">
                                     <i class="bi bi-telephone me-1"></i>
                                     <?= htmlspecialchars($incident['reporter_phone']) ?>
+                                </div>
+                                <?php endif; ?>
+                                <?php if ($incident['is_anonymous']): ?>
+                                <div class="mt-1">
+                                    <span class="badge bg-secondary small">Anonymous Report</span>
                                 </div>
                                 <?php endif; ?>
                             </div>
@@ -371,17 +358,13 @@ $error   = $_GET['error']   ?? '';
                                 <div class="timeline">
                                     <?php foreach ($logs as $log): ?>
                                         <div class="tl-item">
-                                            <div class="tl-dot <?= $log['new_status'] === 'resolved'
-                                                ? 'done' : '' ?>">
-                                            </div>
+                                            <div class="tl-dot <?= $log['new_status'] === 'resolved' ? 'done' : '' ?>"></div>
                                             <div class="small fw-medium">
-                                                <?= ucwords(str_replace('_',' ',
-                                                    $log['new_status'])) ?>
+                                                <?= ucwords(str_replace('_',' ', $log['new_status'])) ?>
                                             </div>
                                             <div class="text-muted" style="font-size:11px;">
-                                                <?= date('M d, Y g:i A',
-                                                    strtotime($log['changed_at'])) ?>
-                                                · <?= htmlspecialchars($log['changed_by_name']) ?>
+                                                <?= date('M d, Y g:i A', strtotime($log['changed_at'])) ?>
+                                                · <?= htmlspecialchars($log['changed_by_name'] ?? 'System') ?>
                                             </div>
                                             <?php if ($log['remarks']): ?>
                                                 <div class="text-muted small mt-1">

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../models/Incident.php';
 
@@ -66,10 +67,15 @@ $sevColor = [
                class="btn btn-outline-light btn-sm">
                 <i class="bi bi-plus-lg me-1"></i> Mag-report
             </a>
-            <a href="/irms/citizen/login.php"
-               class="btn btn-light btn-sm">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Login
-            </a>
+            <?php if (isLoggedIn()): ?>
+    <a href="/irms/citizen/dashboard.php" class="btn btn-light btn-sm">
+        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+    </a>
+<?php else: ?>
+    <a href="/irms/citizen/login.php" class="btn btn-light btn-sm">
+        <i class="bi bi-box-arrow-in-right me-1"></i> Login
+    </a>
+<?php endif; ?>
         </div>
     </div>
 </div>

@@ -148,7 +148,7 @@ if (!$incident) {
             </div>
 
             <div class="d-flex gap-2">
-                <a href="/irms/citizen/track.php?tracking=<?= urlencode($tracking) ?>"
+                <a href="/irms/public/track.php?tracking=<?= urlencode($tracking) ?>"
                    class="btn btn-primary flex-fill">
                     <i class="bi bi-search me-1"></i> I-track ang Report
                 </a>

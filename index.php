@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
-if (isLoggedIn()) { redirectByRole(); }
+if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
+    redirectByRole();
+}
 ?>
 <!DOCTYPE html>
 <html lang="fil">
@@ -460,9 +462,88 @@ if (isLoggedIn()) { redirectByRole(); }
             text-decoration: none;
         }
         .citizen-login-link a:hover { text-decoration: underline; }
+
+        /* ── MOBILE NAVBAR ───────────────────────────── */
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+}
+.hamburger-btn:hover {
+    background: rgba(255,255,255,0.06);
+}
+.mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15,23,42,0.98);
+    backdrop-filter: blur(12px);
+    z-index: 999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu-close {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px; height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+}
+.mobile-nav-link {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    transition: all 0.2s;
+    width: 280px;
+    text-align: center;
+}
+.mobile-nav-link:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.06);
+}
+.mobile-nav-report {
+    background: var(--accent);
+    color: #fff !important;
+    margin-top: 8px;
+    box-shadow: 0 4px 20px rgba(239,68,68,0.3);
+}
+.mobile-nav-report:hover {
+    background: var(--accent2) !important;
+}
+@media (max-width: 768px) {
+    .nav-menu { display: none; }
+    .hamburger-btn { display: flex; }
+}
     </style>
 </head>
 <body>
+
 
 <!-- ── NAVBAR ──────────────────────────────────────── -->
 <nav class="navbar-irms">
@@ -471,7 +552,9 @@ if (isLoggedIn()) { redirectByRole(); }
             <i class="bi bi-shield-check me-2" style="color:var(--accent)"></i>
             IRM<span>S</span>
         </div>
-        <div class="d-flex align-items-center gap-1">
+
+        <!-- Desktop menu -->
+        <div class="nav-menu">
             <a href="#how-it-works" class="nav-pill">Paano Gumagana</a>
             <a href="#hotlines" class="nav-pill">Mga Hotline</a>
             <a href="#categories" class="nav-pill">Kategorya</a>
@@ -482,8 +565,27 @@ if (isLoggedIn()) { redirectByRole(); }
                 Mag-report
             </a>
         </div>
+
+        <!-- Hamburger button — mobile only -->
+        <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileMenu()">
+        <i class="bi bi-list" id="hamburgerIcon"></i>
+        </button>
     </div>
 </nav>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-menu-close" onclick="closeMobileMenu()">
+        <i class="bi bi-x-lg"></i>
+    </button>
+    <a href="#how-it-works" class="mobile-nav-link" onclick="closeMobileMenu()">Paano Gumagana</a>
+    <a href="#hotlines" class="mobile-nav-link" onclick="closeMobileMenu()">Mga Hotline</a>
+    <a href="#categories" class="mobile-nav-link" onclick="closeMobileMenu()">Kategorya</a>
+    <a href="#faq" class="mobile-nav-link" onclick="closeMobileMenu()">FAQ</a>
+    <a href="/irms/public/report.php" class="mobile-nav-link mobile-nav-report">
+        <i class="bi bi-megaphone me-2"></i> Mag-report
+    </a>
+</div>
 
 <!-- ── HERO ────────────────────────────────────────── -->
 <section class="hero">
@@ -866,6 +968,7 @@ if (isLoggedIn()) { redirectByRole(); }
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function toggleFaq(el) {
     var answer = el.nextElementSibling;
@@ -876,6 +979,37 @@ function toggleFaq(el) {
         : 'bi bi-plus-circle';
     icon.style.color = answer.classList.contains('open') ? '#ef4444' : 'var(--muted)';
 }
+
+function toggleMobileMenu() {
+    var menu = document.getElementById('mobileMenu');
+    var icon = document.getElementById('hamburgerIcon');
+    var isOpen = menu.classList.contains('open');
+    if (isOpen) {
+        menu.classList.remove('open');
+        icon.className = 'bi bi-list';
+        document.body.style.overflow = '';
+    } else {
+        menu.classList.add('open');
+        icon.className = 'bi bi-x-lg';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('open');
+    document.getElementById('hamburgerIcon').className = 'bi bi-list';
+    document.body.style.overflow = '';
+}
+
+// Pag na-click sa labas ng menu, magsasara
+document.getElementById('mobileMenu').addEventListener('click', function(e) {
+    if (e.target === this) closeMobileMenu();
+});
+
+// ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMobileMenu();
+});
 </script>
 </body>
 </html>

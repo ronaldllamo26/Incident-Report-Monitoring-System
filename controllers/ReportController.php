@@ -22,17 +22,17 @@ if ($action === 'export_pdf') {
     if ($catF)    { $where[] = 'i.category_id = ?'; $params[] = $catF; }
     if ($sevF)    { $where[] = 'i.severity = ?';    $params[] = $sevF; }
 
-    $sql = "
-        SELECT i.*, c.name AS category_name,
-               u.name AS reporter_name,
-               a.name AS responder_name
-        FROM incidents i
-        JOIN categories c ON i.category_id = c.id
-        JOIN users u ON i.reporter_id = u.id
-        LEFT JOIN users a ON i.assigned_to = a.id
-        WHERE " . implode(' AND ', $where) . "
-        ORDER BY i.reported_at DESC
-    ";
+     $sql = "
+    SELECT i.*, c.name AS category_name,
+           COALESCE(u.name, i.anon_name, 'Anonymous') AS reporter_name,
+           a.name AS responder_name
+    FROM incidents i
+    JOIN categories c ON i.category_id = c.id
+    LEFT JOIN users u ON i.reporter_id = u.id
+    LEFT JOIN users a ON i.assigned_to = a.id
+    WHERE " . implode(' AND ', $where) . "
+    ORDER BY i.reported_at DESC
+";
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $incidents = $stmt->fetchAll();

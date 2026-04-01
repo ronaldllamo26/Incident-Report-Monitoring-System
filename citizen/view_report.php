@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/../includes/auth.php';
 requireRole('citizen');
 require_once __DIR__ . '/../config/db.php';
@@ -10,19 +9,16 @@ $id       = (int)($_GET['id'] ?? 0);
 $model    = new Incident();
 $incident = $model->getById($id);
 
-// Siguraduhing report ng citizen to
 if (!$incident || $incident['reporter_id'] != $user['id']) {
     header('Location: /irms/citizen/dashboard.php');
     exit;
 }
 
 $attachments = $model->getAttachments($id);
-$logs         = $model->getStatusLogs($id);
+$logs        = $model->getStatusLogs($id);
 $responses   = $model->getResponses($id);
-
-// STEP 7: Get feedback data
-$feedback = $model->getFeedback($id);
-$canRate  = $incident['status'] === 'resolved' && !$feedback;
+$feedback    = $model->getFeedback($id);
+$canRate     = in_array($incident['status'], ['resolved','closed']) && !$feedback;
 
 $statusColor = [
     'pending'     => 'warning',
@@ -31,10 +27,8 @@ $statusColor = [
     'closed'      => 'secondary',
 ];
 $sevColor = [
-    'low'      => 'success',
-    'medium'   => 'warning',
-    'high'     => 'danger',
-    'critical' => 'dark',
+    'low' => 'success', 'medium' => 'warning',
+    'high' => 'danger', 'critical' => 'dark',
 ];
 ?>
 <!DOCTYPE html>
@@ -46,58 +40,77 @@ $sevColor = [
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #f1f5f9;
+            margin: 0;
+        }
+        .topbar {
+            background: #0f172a;
+            padding: 14px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
         #map { height: 220px; border-radius: 8px; border: 1px solid #dee2e6; }
         .timeline { position: relative; padding-left: 24px; }
-        .timeline::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0;
-                             width: 1px; background: #dee2e6; }
-        .tl-item { position: relative; margin-bottom: 16px; }
-        .tl-dot { position: absolute; left: -20px; top: 4px; width: 10px; height: 10px;
-                  border-radius: 50%; background: #0d6efd; border: 2px solid #fff;
-                  box-shadow: 0 0 0 1px #0d6efd; }
-        .tl-dot.done { background: #198754; box-shadow: 0 0 0 1px #198754; }
-        .chat-bubble { background: #f8f9fa; border-radius: 0 12px 12px 12px;
-                       padding: 10px 14px; border: 0.5px solid #dee2e6; }
-        .attach-img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px;
-                      border: 1px solid #dee2e6; cursor: pointer; transition: opacity 0.15s; }
-        .attach-img:hover { opacity: 0.85; }
+        .timeline::before { content:''; position:absolute; left:7px; top:0; bottom:0;
+                            width:1px; background:#dee2e6; }
+        .tl-item { position:relative; margin-bottom:16px; }
+        .tl-dot { position:absolute; left:-20px; top:4px; width:10px; height:10px;
+                  border-radius:50%; background:#0d6efd; border:2px solid #fff;
+                  box-shadow:0 0 0 1px #0d6efd; }
+        .tl-dot.done { background:#198754; box-shadow:0 0 0 1px #198754; }
+        .chat-bubble { background:#f8f9fa; border-radius:0 12px 12px 12px;
+                       padding:10px 14px; border:0.5px solid #dee2e6; }
+        .attach-img { width:90px; height:90px; object-fit:cover; border-radius:8px;
+                      border:1px solid #dee2e6; cursor:pointer; transition:opacity 0.15s; }
+        .attach-img:hover { opacity:0.85; }
+        .star-label { font-size:28px; cursor:pointer; color:#dee2e6; transition:color 0.1s; }
     </style>
 </head>
-<body class="bg-light">
+<body>
 
-<nav class="navbar navbar-dark bg-primary">
-    <div class="container">
-        <a class="navbar-brand fw-semibold" href="/irms/citizen/dashboard.php">
-            <i class="bi bi-shield-check me-1"></i> IRMS
-        </a>
-        <a href="/irms/citizen/dashboard.php" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Back
-        </a>
+<!-- Topbar -->
+<div class="topbar">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <a href="/irms/citizen/dashboard.php"
+               style="color:#94a3b8;text-decoration:none;font-size:20px;">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div style="font-size:16px;font-weight:800;color:#fff;">
+                <i class="bi bi-shield-check me-1" style="color:#ef4444;"></i>
+                IRMS
+            </div>
+        </div>
+        <span class="badge bg-<?= $statusColor[$incident['status']] ?> fs-6">
+            <?= ucwords(str_replace('_',' ',$incident['status'])) ?>
+        </span>
     </div>
-</nav>
+</div>
 
 <div class="container py-4">
     <div class="row g-4">
 
+        <!-- LEFT -->
         <div class="col-lg-8">
 
+            <!-- Incident details -->
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-4">
-                    <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
-                        <div>
-                            <p class="text-muted small mb-1">Report #<?= $id ?></p>
-                            <h5 class="fw-semibold mb-0">
-                                <?= htmlspecialchars($incident['title']) ?>
-                            </h5>
-                        </div>
-                        <span class="badge bg-<?= $statusColor[$incident['status']] ?> fs-6">
-                            <?= ucwords(str_replace('_', ' ', $incident['status'])) ?>
-                        </span>
-                    </div>
-
+                    <p class="text-muted small mb-1">Report #<?= $id ?></p>
+                    <h5 class="fw-semibold mb-3">
+                        <?= htmlspecialchars($incident['title']) ?>
+                    </h5>
                     <div class="d-flex flex-wrap gap-2 mb-3">
                         <span class="badge bg-light text-dark border">
-                            <i class="bi bi-tag me-1"></i><?= htmlspecialchars($incident['category_name']) ?>
+                            <i class="bi bi-tag me-1"></i>
+                            <?= htmlspecialchars($incident['category_name']) ?>
                         </span>
                         <span class="badge bg-<?= $sevColor[$incident['severity']] ?>">
                             <?= ucfirst($incident['severity']) ?> severity
@@ -107,9 +120,7 @@ $sevColor = [
                             <?= date('M d, Y g:i A', strtotime($incident['reported_at'])) ?>
                         </span>
                     </div>
-
                     <p class="mb-3"><?= nl2br(htmlspecialchars($incident['description'])) ?></p>
-
                     <div class="text-muted small">
                         <i class="bi bi-geo-alt me-1"></i>
                         <?= htmlspecialchars($incident['location']) ?>
@@ -117,6 +128,7 @@ $sevColor = [
                 </div>
             </div>
 
+            <!-- Map -->
             <?php if ($incident['latitude'] && $incident['longitude']): ?>
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
@@ -128,6 +140,7 @@ $sevColor = [
             </div>
             <?php endif; ?>
 
+            <!-- Attachments -->
             <?php if ($attachments): ?>
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
@@ -147,7 +160,8 @@ $sevColor = [
             </div>
             <?php endif; ?>
 
-            <div class="card border-0 shadow-sm">
+            <!-- Responses -->
+            <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-3">
                         <i class="bi bi-chat-dots me-1"></i> Mga Response ng Responder
@@ -165,7 +179,7 @@ $sevColor = [
                                              background:#e8f0fe;display:flex;align-items:center;
                                              justify-content:center;font-size:12px;font-weight:500;
                                              color:#1a73e8;">
-                                            <?= strtoupper(substr($r['responder_name'], 0, 1)) ?>
+                                            <?= strtoupper(substr($r['responder_name'],0,1)) ?>
                                         </div>
                                         <span class="small fw-medium">
                                             <?= htmlspecialchars($r['responder_name']) ?>
@@ -186,23 +200,23 @@ $sevColor = [
                 </div>
             </div>
 
+            <!-- Rating -->
             <?php if ($canRate): ?>
-            <div class="card border-0 shadow-sm mt-3">
+            <div class="card border-0 shadow-sm border-start border-warning border-3">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-1">
-                        <i class="bi bi-star me-1"></i> I-rate ang serbisyo
+                        <i class="bi bi-star-fill text-warning me-1"></i> I-rate ang Serbisyo
                     </p>
                     <p class="text-muted small mb-3">
-                        Na-resolve na ang iyong report. Paano mo i-rate ang response?
+                        Na-resolve na ang iyong report! Paano mo i-rate ang response ng aming responder?
                     </p>
                     <form action="/irms/ajax/submit_feedback.php" method="POST">
                         <input type="hidden" name="incident_id" value="<?= $id ?>">
-                        <div class="d-flex gap-2 mb-3" id="star-container">
+                        <div class="d-flex gap-1 mb-3" id="star-container">
                             <?php for ($s = 1; $s <= 5; $s++): ?>
                                 <input type="radio" name="rating" id="star<?= $s ?>"
                                        value="<?= $s ?>" class="d-none" required>
-                                <label for="star<?= $s ?>" class="fs-4"
-                                       style="cursor:pointer;color:#dee2e6;"
+                                <label for="star<?= $s ?>" class="star-label"
                                        onmouseover="highlightStars(<?= $s ?>)"
                                        onmouseout="resetStars()"
                                        onclick="selectStar(<?= $s ?>)">
@@ -211,30 +225,33 @@ $sevColor = [
                             <?php endfor; ?>
                         </div>
                         <div class="mb-3">
-                            <textarea name="comment" class="form-control" rows="2"
+                            <textarea name="comment" class="form-control form-control-sm" rows="2"
                                 placeholder="Anong masasabi mo sa response? (optional)"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-warning btn-sm">
+                        <button type="submit" class="btn btn-warning btn-sm fw-semibold">
                             <i class="bi bi-send me-1"></i> I-submit ang Rating
                         </button>
                     </form>
                 </div>
             </div>
+
             <?php elseif ($feedback): ?>
-            <div class="card border-0 shadow-sm mt-3">
+            <div class="card border-0 shadow-sm border-start border-success border-3">
                 <div class="card-body p-3">
-                    <p class="small fw-medium mb-1">
+                    <p class="small fw-medium mb-2">
                         <i class="bi bi-star-fill text-warning me-1"></i> Iyong Rating
                     </p>
                     <div class="d-flex gap-1 mb-1">
                         <?php for ($s = 1; $s <= 5; $s++): ?>
-                            <i class="bi bi-star-fill"
+                            <i class="bi bi-star-fill fs-5"
                                style="color:<?= $s <= $feedback['rating'] ? '#ffc107' : '#dee2e6' ?>"></i>
                         <?php endfor; ?>
-                        <span class="ms-2 small text-muted"><?= $feedback['rating'] ?>/5</span>
+                        <span class="ms-2 small text-muted fw-medium">
+                            <?= $feedback['rating'] ?>/5
+                        </span>
                     </div>
                     <?php if ($feedback['comment']): ?>
-                        <p class="small text-muted mb-0">
+                        <p class="small text-muted mb-0 fst-italic">
                             "<?= htmlspecialchars($feedback['comment']) ?>"
                         </p>
                     <?php endif; ?>
@@ -244,7 +261,29 @@ $sevColor = [
 
         </div>
 
+        <!-- RIGHT -->
         <div class="col-lg-4">
+
+            <!-- Tracking number -->
+            <?php if ($incident['tracking_number']): ?>
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3 text-center">
+                    <p class="small fw-medium mb-1">
+                        <i class="bi bi-qr-code me-1"></i> Tracking Number
+                    </p>
+                    <div style="font-family:monospace;font-size:18px;font-weight:700;
+                         letter-spacing:2px;color:#1e293b;">
+                        <?= htmlspecialchars($incident['tracking_number']) ?>
+                    </div>
+                    <a href="/irms/public/track.php?tracking=<?= urlencode($incident['tracking_number']) ?>"
+                       class="btn btn-outline-primary btn-sm mt-2">
+                        <i class="bi bi-search me-1"></i> I-track
+                    </a>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Assigned responder -->
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-2">
@@ -254,8 +293,9 @@ $sevColor = [
                         <div class="d-flex align-items-center gap-2">
                             <div style="width:34px;height:34px;border-radius:50%;
                                  background:#d1fae5;display:flex;align-items:center;
-                                 justify-content:center;font-size:13px;font-weight:500;color:#065f46;">
-                                <?= strtoupper(substr($incident['responder_name'], 0, 1)) ?>
+                                 justify-content:center;font-size:13px;font-weight:600;
+                                 color:#065f46;">
+                                <?= strtoupper(substr($incident['responder_name'],0,1)) ?>
                             </div>
                             <span class="small fw-medium">
                                 <?= htmlspecialchars($incident['responder_name']) ?>
@@ -263,13 +303,13 @@ $sevColor = [
                         </div>
                     <?php else: ?>
                         <p class="text-muted small mb-0">
-                            <i class="bi bi-hourglass me-1"></i>
-                            Pending assignment pa.
+                            <i class="bi bi-hourglass me-1"></i> Pending assignment pa.
                         </p>
                     <?php endif; ?>
                 </div>
             </div>
 
+            <!-- Status timeline -->
             <div class="card border-0 shadow-sm">
                 <div class="card-body p-3">
                     <p class="small fw-medium mb-3">
@@ -283,14 +323,14 @@ $sevColor = [
                                 <div class="tl-item">
                                     <div class="tl-dot <?= $log['new_status'] === 'resolved' ? 'done' : '' ?>"></div>
                                     <div class="small fw-medium">
-                                        <?= ucwords(str_replace('_', ' ', $log['new_status'])) ?>
+                                        <?= ucwords(str_replace('_',' ',$log['new_status'])) ?>
                                     </div>
                                     <div class="text-muted" style="font-size:11px;">
                                         <?= date('M d, Y g:i A', strtotime($log['changed_at'])) ?>
-                                        · <?= htmlspecialchars($log['changed_by_name']) ?>
+                                        · <?= htmlspecialchars($log['changed_by_name'] ?? 'System') ?>
                                     </div>
                                     <?php if ($log['remarks']): ?>
-                                        <div class="text-muted small mt-1">
+                                        <div class="text-muted small mt-1 fst-italic">
                                             "<?= htmlspecialchars($log['remarks']) ?>"
                                         </div>
                                     <?php endif; ?>
@@ -300,6 +340,7 @@ $sevColor = [
                     <?php endif; ?>
                 </div>
             </div>
+
         </div>
     </div>
 </div>
@@ -307,13 +348,11 @@ $sevColor = [
 <?php if ($incident['latitude'] && $incident['longitude']): ?>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
-var map = L.map('map', { zoomControl: true, dragging: false, scrollWheelZoom: false })
+var map = L.map('map', { zoomControl:true, dragging:false, scrollWheelZoom:false })
            .setView([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>], 16);
-
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors'
 }).addTo(map);
-
 L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>])
  .addTo(map)
  .bindPopup('<?= addslashes(htmlspecialchars($incident['location'])) ?>')
@@ -322,22 +361,18 @@ L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>])
 <?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
-// STAR RATING SCRIPT
 var selectedStar = 0;
-
 function highlightStars(n) {
-    document.querySelectorAll('#star-container label').forEach(function(lbl, i) {
+    document.querySelectorAll('.star-label').forEach(function(lbl, i) {
         lbl.style.color = i < n ? '#ffc107' : '#dee2e6';
     });
 }
-function resetStars() {
-    highlightStars(selectedStar);
-}
+function resetStars() { highlightStars(selectedStar); }
 function selectStar(n) {
     selectedStar = n;
     highlightStars(n);
+    document.getElementById('star' + n).checked = true;
 }
 </script>
 </body>

@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
 requireRole('responder');
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../models/Incident.php';
+require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../models/Incident.php';
 
 $user     = currentUser();
 $id       = (int)($_GET['id'] ?? 0);
@@ -226,41 +226,65 @@ $error   = $_GET['error']   ?? '';
         <div class="col-lg-4">
 
             <!-- Update status -->
-            <?php if (!in_array($incident['status'], ['closed'])): ?>
-            <div class="card border-0 shadow-sm mb-3">
-                <div class="card-body p-3">
-                    <p class="small fw-medium mb-2">
-                        <i class="bi bi-arrow-repeat me-1"></i> I-update ang Status
-                    </p>
-                    <form action="/irms/ajax/update_status.php" method="POST">
-                        <input type="hidden" name="incident_id" value="<?= $id ?>">
-                        <input type="hidden" name="action" value="update_status">
-                        <input type="hidden" name="old_status" value="<?= $incident['status'] ?>">
-                        <div class="mb-2">
-                            <select name="new_status" class="form-select form-select-sm" required>
-                                <option value="">-- Piliin ang bagong status --</option>
-                                <?php
-                                $statuses = ['pending', 'in_progress', 'resolved', 'closed'];
-                                foreach ($statuses as $s):
-                                    if ($s === $incident['status']) continue;
-                                ?>
-                                    <option value="<?= $s ?>">
-                                        <?= ucwords(str_replace('_', ' ', $s)) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-2">
-                            <textarea name="remarks" class="form-control form-control-sm"
-                                rows="2" placeholder="Remarks (optional)..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
-                            <i class="bi bi-check2 me-1"></i> I-update
-                        </button>
-                    </form>
-                </div>
+<?php if (!in_array($incident['status'], ['closed'])): ?>
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-3">
+        <p class="small fw-medium mb-2">
+            <i class="bi bi-arrow-repeat me-1"></i> I-update ang Status
+        </p>
+
+        <?php if ($incident['status'] === 'pending'): ?>
+        <!-- ACKNOWLEDGE BUTTON -->
+        <div class="alert alert-warning py-2 small mb-2">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Hindi pa naka-acknowledge ang incident na ito.
+        </div>
+        <form action="/irms/ajax/update_status.php" method="POST">
+            <input type="hidden" name="incident_id" value="<?= $id ?>">
+            <input type="hidden" name="action" value="update_status">
+            <input type="hidden" name="old_status" value="pending">
+            <input type="hidden" name="new_status" value="in_progress">
+            <input type="hidden" name="remarks" value="Incident acknowledged by responder.">
+            <button type="submit" class="btn btn-warning w-100 mb-2"
+                    onclick="return confirm('I-acknowledge ang incident na ito?')">
+                <i class="bi bi-check2-circle me-1"></i> I-Acknowledge
+            </button>
+        </form>
+
+        <?php elseif ($incident['status'] === 'in_progress'): ?>
+        <!-- RESOLVE FORM -->
+        <div class="alert alert-info py-2 small mb-2">
+            <i class="bi bi-info-circle me-1"></i>
+            In Progress — i-resolve pagkatapos maalagaan.
+        </div>
+        <form action="/irms/ajax/update_status.php" method="POST">
+            <input type="hidden" name="incident_id" value="<?= $id ?>">
+            <input type="hidden" name="action" value="update_status">
+            <input type="hidden" name="old_status" value="in_progress">
+            <input type="hidden" name="new_status" value="resolved">
+            <div class="mb-2">
+                <textarea name="remarks" class="form-control form-control-sm"
+                    rows="3"
+                    placeholder="Findings / actions taken... (required)"
+                    required></textarea>
             </div>
-            <?php endif; ?>
+            <button type="submit" class="btn btn-success w-100"
+                    onclick="return confirm('I-resolve na ang incident?')">
+                <i class="bi bi-check-circle me-1"></i> I-Resolve ang Incident
+            </button>
+        </form>
+
+        <?php elseif ($incident['status'] === 'resolved'): ?>
+        <!-- WAITING FOR ADMIN TO CLOSE -->
+        <div class="alert alert-success py-2 small mb-0">
+            <i class="bi bi-check-circle me-1"></i>
+            Na-resolve na! Hinihintay ang admin na i-close.
+        </div>
+
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
             <!-- Reporter info -->
             <div class="card border-0 shadow-sm mb-3">

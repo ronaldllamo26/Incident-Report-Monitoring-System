@@ -19,7 +19,7 @@ $incident = $model->getById($incidentId);
 // Check na sa citizen to at resolved na
 if (!$incident
     || $incident['reporter_id'] != $user['id']
-    || $incident['status'] !== 'resolved') {
+    || !in_array($incident['status'], ['resolved', 'closed'])) {
     header('Location: /irms/citizen/dashboard.php');
     exit;
 }

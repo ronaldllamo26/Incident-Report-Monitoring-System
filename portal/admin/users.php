@@ -1,8 +1,8 @@
 <?php
 
-require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
 requireRole('admin');
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../../config/db.php';
 
 $success = $_GET['success'] ?? '';
 $error   = $_GET['error']   ?? '';
@@ -88,60 +88,23 @@ $roleColor = [
     <title>Users — IRMS Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
-        .sidebar { width: 220px; min-height: 100vh; background: #1e293b; }
-        .sidebar .nav-link { color: #94a3b8; font-size: 14px; padding: 10px 20px; border-radius: 6px; margin: 2px 8px; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: #334155; color: #fff; }
-        .main-content { flex: 1; overflow-y: auto; }
-        .top-nav { background: #fff; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; }
-    </style>
+    <?php include __DIR__ . '/../../includes/sidebar_style.php'; ?>
 </head>
 <body class="bg-light">
 <div class="d-flex">
 
-    <div class="sidebar d-flex flex-column py-3">
-        <div class="px-4 mb-4">
-            <div class="text-white fw-semibold fs-6">
-                <i class="bi bi-shield-check me-2"></i>IRMS
-            </div>
-            <div class="text-secondary" style="font-size:11px;">Admin Panel</div>
-        </div>
-         <nav class="flex-column nav">
-    <a href="/irms/portal/admin/dashboard.php" class="nav-link">
-        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-    </a>
-    <a href="/irms/portal/admin/incidents.php" class="nav-link">
-        <i class="bi bi-exclamation-triangle me-2"></i> Incidents
-    </a>
-    <a href="/irms/portal/admin/users.php" class="nav-link active">
-        <i class="bi bi-people me-2"></i> Users
-    </a>
-    <a href="/irms/portal/admin/categories.php" class="nav-link">
-        <i class="bi bi-tags me-2"></i> Categories
-    </a>
-    <a href="/irms/portal/admin/reports.php" class="nav-link">
-        <i class="bi bi-file-earmark-bar-graph me-2"></i> Reports
-    </a>
-</nav>
-        <div class="mt-auto px-3">
-            <div class="text-secondary small px-2 mb-2">
-                <i class="bi bi-person-circle me-1"></i>
-                <?= htmlspecialchars($_SESSION['name']) ?>
-            </div>
-            <a href="/irms/controllers/AuthController.php?action=logout"
-               class="nav-link text-danger">
-                <i class="bi bi-box-arrow-right me-2"></i> Logout
-            </a>
-        </div>
-    </div>
-
-    <div class="main-content">
+    <?php include __DIR__ . '/../../includes/sidebar_admin.php'; ?><div class="main-content">
         <div class="top-nav d-flex justify-content-between align-items-center">
-            <h6 class="fw-semibold mb-0">User Management</h6>
-            <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
-                    data-bs-target="#addUserModal">
-                <i class="bi bi-plus-lg me-1"></i> Add User
-            </button>
+            <div class="d-flex align-items-center gap-3">
+                <button class="hamburger btn btn-sm btn-outline-secondary"
+                        style="display:none;align-items:center;justify-content:center;
+                               width:36px;height:36px;padding:0;"
+                        onclick="toggleSidebar()">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <h6 class="fw-semibold mb-0">User Management</h6>
+            </div>
+            <span class="text-muted small"><?= date('F d, Y') ?></span>
         </div>
 
         <div class="p-4">
