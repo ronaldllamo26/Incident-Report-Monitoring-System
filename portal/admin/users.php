@@ -1,13 +1,12 @@
 <?php
-
-require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../../includes/auth.php';
 requireRole('admin');
 require_once __DIR__ . '/../../config/db.php';
 
+$user    = currentUser();
 $success = $_GET['success'] ?? '';
 $error   = $_GET['error']   ?? '';
 
-// Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -17,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password']      ?? '';
         $role     = $_POST['role']          ?? 'citizen';
         $phone    = trim($_POST['phone']    ?? '');
+        $agency   = trim($_POST['agency']   ?? '');
 
         if ($name && $email && $password) {
             $check = $pdo->prepare("SELECT id FROM users WHERE email = ?");
@@ -26,14 +26,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        urlencode('Ginagamit na ang email.'));
                 exit;
             }
-            $stmt = $pdo->prepare("
-                INSERT INTO users (name, email, password, role, phone)
-                VALUES (?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([
+            $pdo->prepare("
+                INSERT INTO users (name, email, password, role, phone, agency)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ")->execute([
                 $name, $email,
                 password_hash($password, PASSWORD_BCRYPT),
-                $role, $phone
+                $role, $phone, $agency ?: null
             ]);
             header('Location: /irms/portal/admin/users.php?success=' .
                    urlencode('Na-add na ang user.'));
@@ -44,10 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'toggle') {
         $uid = (int)($_POST['user_id'] ?? 0);
         if ($uid && $uid != $_SESSION['user_id']) {
-            $stmt = $pdo->prepare("
-                UPDATE users SET is_active = NOT is_active WHERE id = ?
-            ");
-            $stmt->execute([$uid]);
+            $pdo->prepare("UPDATE users SET is_active = NOT is_active WHERE id = ?")
+                ->execute([$uid]);
         }
         header('Location: /irms/portal/admin/users.php?success=' .
                urlencode('Na-update ang user status.'));
@@ -73,12 +70,6 @@ $users = $pdo->query("
     FROM users u
     ORDER BY u.created_at DESC
 ")->fetchAll();
-
-$roleColor = [
-    'admin'     => 'danger',
-    'responder' => 'success',
-    'citizen'   => 'primary',
-];
 ?>
 <!DOCTYPE html>
 <html lang="fil">
@@ -93,7 +84,9 @@ $roleColor = [
 <body class="bg-light">
 <div class="d-flex">
 
-    <?php include __DIR__ . '/../../includes/sidebar_admin.php'; ?><div class="main-content">
+    <?php include __DIR__ . '/../../includes/sidebar_admin.php'; ?>
+
+    <div class="main-content">
         <div class="top-nav d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
                 <button class="hamburger btn btn-sm btn-outline-secondary"
@@ -104,7 +97,10 @@ $roleColor = [
                 </button>
                 <h6 class="fw-semibold mb-0">User Management</h6>
             </div>
-            <span class="text-muted small"><?= date('F d, Y') ?></span>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                    data-bs-target="#addUserModal">
+                <i class="bi bi-plus-lg me-1"></i> Add User
+            </button>
         </div>
 
         <div class="p-4">
@@ -131,6 +127,7 @@ $roleColor = [
                                     <th class="ps-3 small">#</th>
                                     <th class="small">Name</th>
                                     <th class="small">Email</th>
+                                    <th class="small">Agency</th>
                                     <th class="small">Role</th>
                                     <th class="small">Reports</th>
                                     <th class="small">Status</th>
@@ -148,8 +145,16 @@ $roleColor = [
                                     <td class="small text-muted">
                                         <?= htmlspecialchars($u['email']) ?>
                                     </td>
+                                    <td class="small">
+                                        <?php if ($u['agency']): ?>
+                                            <span class="badge bg-info text-dark small">
+                                                <?= htmlspecialchars($u['agency']) ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
-                                        <!-- Change role form -->
                                         <form action="" method="POST"
                                               class="d-flex gap-1 align-items-center">
                                             <input type="hidden" name="action" value="change_role">
@@ -167,9 +172,7 @@ $roleColor = [
                                             </select>
                                         </form>
                                     </td>
-                                    <td class="small text-center">
-                                        <?= $u['report_count'] ?>
-                                    </td>
+                                    <td class="small text-center"><?= $u['report_count'] ?></td>
                                     <td>
                                         <span class="badge bg-<?= $u['is_active'] ? 'success' : 'secondary' ?> small">
                                             <?= $u['is_active'] ? 'Active' : 'Inactive' ?>
@@ -234,10 +237,24 @@ $roleColor = [
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-medium">Role</label>
-                        <select name="role" class="form-select">
+                        <select name="role" class="form-select" id="role-select"
+                                onchange="toggleAgency(this.value)">
                             <option value="citizen">Citizen</option>
-                            <option value="responder">Responder</option>
+                            <option value="responder" selected>Responder</option>
                             <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="agency-field">
+                        <label class="form-label small fw-medium">Agency</label>
+                        <select name="agency" class="form-select">
+                            <option value="">-- Piliin ang Agency --</option>
+                            <option value="BFP">Bureau of Fire Protection (BFP)</option>
+                            <option value="PNP">Philippine National Police (PNP)</option>
+                            <option value="NDRRMC">NDRRMC / LDRRMO</option>
+                            <option value="DOH">Department of Health (DOH)</option>
+                            <option value="MMDA">MMDA</option>
+                            <option value="DPWH">DPWH</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -261,5 +278,14 @@ $roleColor = [
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleAgency(role) {
+    var agencyField = document.getElementById('agency-field');
+    agencyField.style.display = role === 'responder' ? 'block' : 'none';
+}
+document.addEventListener('DOMContentLoaded', function() {
+    toggleAgency(document.getElementById('role-select').value);
+});
+</script>
 </body>
 </html>

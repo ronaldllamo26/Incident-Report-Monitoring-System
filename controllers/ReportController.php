@@ -146,7 +146,7 @@ if ($action === 'export_pdf') {
         $pdf->Cell(22, $rowH, ucfirst($inc['severity']),                         0, 0, 'C', true);
         $pdf->Cell(25, $rowH, ucwords(str_replace('_',' ',$inc['status'])),      0, 0, 'C', true);
         $pdf->Cell(35, $rowH, mb_substr($inc['reporter_name'], 0, 20),           0, 0, 'L', true);
-        $pdf->Cell(35, $rowH, mb_substr($inc['responder_name'] ?? '—', 0, 20),   0, 0, 'L', true);
+        $pdf->Cell(35, $rowH, mb_substr($inc['responder_name'] ?? '-', 0, 20), 0, 0, 'L', true);
         $pdf->Cell(30, $rowH, date('M d, Y', strtotime($inc['reported_at'])),    0, 0, 'C', true);
         $pdf->Ln();
 
