@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
-if (isLoggedIn()) { redirectByRole(); }
+if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
+    redirectByRole();
+}
 ?>
 <!DOCTYPE html>
 <html lang="fil">
@@ -130,79 +132,124 @@ if (isLoggedIn()) { redirectByRole(); }
             transition: all 0.15s;
         }
         .nav-report-btn:hover { background: var(--qc-red2); transform: translateY(-1px); }
-        .hamburger {
-            display: none;
-            background: none;
-            border: 1px solid var(--border);
-            color: var(--text);
-            width: 38px; height: 38px;
-            border-radius: 7px;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 18px;
-        }
+        /* ── HAMBURGER BUTTON ──────────────── */
+.hamburger {
+    display: none; /* Default: tago sa desktop */
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 38px; 
+    height: 38px;
+    border-radius: 7px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s ease;
+}
 
-        /* Mobile drawer */
-        .mob-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 998;
-        }
-        .mob-overlay.open { display: block; }
-        .mob-drawer {
-            position: fixed;
-            top: 0; right: -300px;
-            width: 300px; height: 100%;
-            background: var(--white);
-            z-index: 999;
-            padding: 20px;
-            transition: right 0.25s ease;
-            box-shadow: -4px 0 24px rgba(0,0,0,0.15);
-            overflow-y: auto;
-        }
-        .mob-drawer.open { right: 0; }
-        .mob-drawer-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border);
-        }
-        .mob-close {
-            background: none;
-            border: 1px solid var(--border);
-            width: 32px; height: 32px;
-            border-radius: 6px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--text);
-        }
-        .mob-nav-link {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 14px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text2);
-            margin-bottom: 4px;
-            transition: all 0.15s;
-        }
-        .mob-nav-link:hover { background: rgba(0,61,165,0.06); color: var(--qc-blue); }
-        .mob-nav-report { background: var(--qc-red); color: #fff !important; margin-top: 8px; }
-        .mob-nav-report:hover { background: var(--qc-red2) !important; }
+.hamburger:hover {
+    background: rgba(0, 61, 165, 0.05);
+    border-color: var(--qc-blue);
+}
 
-        @media (max-width: 991px) {
-            .nav-links { display: none; }
-            .hamburger { display: flex; }
-        }
+/* ── MOBILE DRAWER & OVERLAY ────────── */
+.mob-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000; /* Taasan natin para laging nasa taas */
+    backdrop-filter: blur(4px); /* Dagdag glass effect para sa overlay */
+}
+
+/* Gamit tayo ng class na "open" para sa overlay toggle */
+.mob-overlay.open { 
+    display: block; 
+}
+
+.mob-drawer {
+    position: fixed;
+    top: 0; 
+    right: -300px; /* Nakatago sa labas ng screen */
+    width: 300px; 
+    height: 100%;
+    background: var(--white);
+    z-index: 1001; /* Mas mataas sa overlay */
+    padding: 20px;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Mas swabe na slide */
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+}
+
+.mob-drawer.open { 
+    right: 0; /* Papasok sa screen */
+}
+
+/* ── MOBILE NAVIGATION LINKS ────────── */
+.mob-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.mob-close {
+    background: none;
+    border: 1px solid var(--border);
+    width: 32px; 
+    height: 32px;
+    border-radius: 6px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.mob-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text2);
+    margin-bottom: 4px;
+    transition: all 0.15s;
+}
+
+.mob-nav-link:hover { 
+    background: rgba(0, 61, 165, 0.06); 
+    color: var(--qc-blue); 
+}
+
+.mob-nav-report { 
+    background: var(--qc-red); 
+    color: #fff !important; 
+    margin-top: 8px; 
+    justify-content: center; /* Center ang text sa red button */
+}
+
+.mob-nav-report:hover { 
+    background: var(--qc-red2) !important; 
+    transform: scale(1.02);
+}
+
+/* ── BREAKPOINTS ────────────────────── */
+@media (max-width: 991px) {
+    .nav-links { 
+        display: none !important; /* Force hide yung desktop links */
+    }
+    .hamburger { 
+        display: flex; /* Pakita na ang mobile button */
+    }
+}
 
         /* ── HERO ────────────────────────────────── */
         .hero {
@@ -294,57 +341,105 @@ if (isLoggedIn()) { redirectByRole(); }
             transform: translateY(-2px);
             box-shadow: 0 8px 28px rgba(204,0,0,0.5);
         }
-        .hero-btn-secondary {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.25);
-            padding: 14px 26px;
-            border-radius: 7px;
-            font-size: 15px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-        }
-        .hero-btn-secondary:hover {
-            background: rgba(255,255,255,0.18);
-            color: #fff;
-            border-color: rgba(255,255,255,0.4);
-        }
+        /* ── HERO SECONDARY BUTTON (GLASS VERSION) ── */
+       .hero-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px); /* Ito yung nagpapalinaw sa glass effect */
+    -webkit-backdrop-filter: blur(10px);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 14px 26px;
+    border-radius: 7px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-        /* Stats */
-        .hero-stats {
-            display: flex;
-            gap: 0;
-            margin-top: 48px;
-            padding-top: 28px;
-            border-top: 1px solid rgba(255,255,255,0.12);
-        }
-        .stat-col { flex: 1; padding-right: 24px; }
-        .stat-col:not(:last-child) {
-            border-right: 1px solid rgba(255,255,255,0.12);
-            margin-right: 24px;
-        }
-        .stat-col .n { font-size: 28px; font-weight: 800; color: var(--qc-gold); line-height: 1; }
-        .stat-col .l { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .hero-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2); /* Mas lilitaw yung puti pag tinutukan */
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px); /* Swabe na angat */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
 
+       /* ── STATS SECTION (RESPONSIVE) ── */
+.hero-stats {
+    display: flex;
+    flex-wrap: wrap; /* Ito ang pinaka-importante para bumaba sa mobile */
+    gap: 20px 0; /* Vertical gap para sa mobile, 0 sa horizontal dahil may margin/padding ka */
+    margin-top: 48px;
+    padding-top: 28px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+}
+.stat-col { 
+    flex: 1; 
+    min-width: 120px; /* Para hindi sila maging sobrang nipis */
+    padding-right: 24px; 
+}
+.stat-col:not(:last-child) {
+    border-right: 1px solid rgba(255,255,255,0.12);
+    margin-right: 24px;
+}
+.stat-col .n { 
+    font-size: clamp(24px, 4vw, 28px); /* Dynamic size para sa mobile */
+    font-weight: 800; 
+    color: var(--qc-gold); 
+    line-height: 1; 
+}
+.stat-col .l { 
+    font-size: 10px; 
+    color: rgba(255,255,255,0.45); 
+    margin-top: 4px; 
+    font-weight: 500; 
+    text-transform: uppercase; 
+    letter-spacing: 0.5px; 
+}
+/* ── MOBILE ADJUSTMENTS ── */
+@media (max-width: 768px) {
+    .stat-col {
+        flex: 0 0 45%; /* Dalawang column muna sa tablets/malaking phone */
+    }
+    .stat-col:nth-child(even) {
+        border-right: none; /* Tanggalin ang border sa kanan ng bawat pang-dalawa */
+        margin-right: 0;
+    }
+}
+@media (max-width: 480px) {
+    .stat-col {
+        flex: 0 0 100%; /* Isang column na lang sa maliliit na phone */
+        border-right: none !important;
+        margin-right: 0 !important;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.05); /* Optional: Divider sa ilalim */
+    }
+    .stat-col:last-child {
+        border-bottom: none;
+    }
+}
         /* Action panel */
         .action-panel {
-            background: var(--white);
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.25);
-        }
-        .ap-header {
-            background: var(--qc-blue2);
-            padding: 18px 22px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            border-bottom: 2px solid var(--qc-gold);
-        }
+    background: rgba(255, 255, 255, 0.1); /* Transparent white */
+    backdrop-filter: blur(12px);         /* Frosted glass effect */
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Manipis na puting outline */
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+}
+
+.ap-header {
+    background: rgba(0, 45, 122, 0.5); /* Transparent Blue para sa header */
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 2px solid var(--qc-gold);
+}
         .ap-header-icon {
             width: 38px; height: 38px;
             background: rgba(245,166,35,0.15);
@@ -381,40 +476,74 @@ if (isLoggedIn()) { redirectByRole(); }
         .ap-btn-red .ap-btn-icon { background: rgba(255,255,255,0.15); color: #fff; }
         .ap-btn-red .ap-btn-sub  { color: rgba(255,255,255,0.65); }
 
-        .ap-btn-light { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-        .ap-btn-light:hover { background: rgba(0,61,165,0.05); border-color: var(--border2); color: var(--qc-blue); }
-        .ap-btn-light .ap-btn-icon { background: rgba(0,61,165,0.08); color: var(--qc-blue); }
-        .ap-btn-light .ap-btn-sub  { color: var(--muted); }
+        .ap-btn-light { 
+    background: rgba(255, 255, 255, 0.05); /* Transparent background */
+    color: #fff; /* Gawing puti ang text para mabasa sa dark background */
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    }
+    .ap-btn-light:hover { 
+    background: rgba(255, 255, 255, 0.15); 
+    border-color: rgba(255, 255, 255, 0.3); 
+    color: #fff; 
+    }
+    /* Para lumitaw yung sub-text (yung maliliit na description sa button) */
+    .ap-btn-light .ap-btn-sub { color: rgba(255, 255, 255, 0.6); }
+    .ap-btn-light .ap-btn-label { color: #fff; }
 
         .ap-btn-label { font-size: 13px; font-weight: 600; line-height: 1.2; }
         .ap-btn-sub   { font-size: 11px; font-weight: 400; margin-top: 1px; }
         .ap-divider   { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
-        .staff-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            background: #F7F9FF;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            text-decoration: none;
-            transition: all 0.15s;
-        }
-        .staff-row:hover { background: rgba(0,61,165,0.05); border-color: var(--border2); }
-        .staff-row-icon {
-            width: 30px; height: 30px;
-            background: rgba(0,61,165,0.08);
-            border-radius: 6px;
-            display: flex; align-items: center; justify-content: center;
-            color: var(--qc-blue);
-            font-size: 14px;
-            flex-shrink: 0;
-        }
-        .staff-row-text  { flex: 1; }
-        .staff-row-label { font-size: 12px; font-weight: 600; color: var(--text2); }
-        .staff-row-sub   { font-size: 11px; color: var(--muted); }
-        .staff-row-arrow { color: var(--muted); font-size: 13px; }
+        /* ── STAFF PORTAL (GLASSMORMIPHISM VERSION) ── */
+.staff-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    /* Transparent background para sa glass look */
+    background: rgba(255, 255, 255, 0.05); 
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+/* Eto yung fix sa hover para lalong lumitaw ang text */
+.staff-row:hover { 
+    background: rgba(255, 255, 255, 0.15); 
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+.staff-row-icon {
+    width: 30px; 
+    height: 30px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
+    color: #fff; /* Puti na ang icon */
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.staff-row-text { flex: 1; }
+.staff-row-label { 
+    font-size: 12px; 
+    font-weight: 600; 
+    color: #FFFFFF; /* Puti ang main text para readable sa dark glass */
+}
+.staff-row-sub { 
+    font-size: 11px; 
+    color: rgba(255, 255, 255, 0.6); /* Bahagyang transparent na puti */
+}
+.staff-row-arrow { 
+    color: rgba(255, 255, 255, 0.5); 
+    font-size: 13px; 
+}
+/* Fix para sa hover state ng text elements */
+.staff-row:hover .staff-row-label { color: #FFFFFF !important; }
+.staff-row:hover .staff-row-sub { color: rgba(255, 255, 255, 0.9) !important; }
+.staff-row:hover .staff-row-icon { background: var(--qc-gold); color: var(--qc-blue2); }
 
         /* ── GOLD BAR ────────────────────────────── */
         .gold-bar { background: var(--qc-gold); padding: 12px 0; border-top: 1px solid var(--qc-gold2); }
@@ -547,9 +676,7 @@ if (isLoggedIn()) { redirectByRole(); }
 
         /* ── CTA ─────────────────────────────────── */
         .cta-block {
-            background:
-                linear-gradient(135deg, rgba(0,29,80,0.92), rgba(0,45,122,0.88)),
-                url('/irms/assets/img/QC_BANNER.png') center / cover no-repeat;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url('/irms/assets/img/QC_BANNER.png') center / cover no-repeat;
             border-radius: 14px;
             padding: 56px 40px;
             text-align: center;
@@ -563,8 +690,26 @@ if (isLoggedIn()) { redirectByRole(); }
             pointer-events: none;
         }
         .cta-inner { position: relative; z-index: 1; }
-        .cta-block h2 { font-size:32px; font-weight:800; color:#fff; margin-bottom:12px; letter-spacing:-0.5px; }
-        .cta-block p  { font-size:15px; color:rgba(255,255,255,0.6); margin-bottom:28px; max-width:440px; margin-left:auto; margin-right:auto; }
+
+        /* DITO MO DAGDAGAN YUNG TEXT-SHADOW */
+        .cta-block h2 { 
+            font-size:32px; 
+            font-weight:800; 
+            color:#fff; 
+            margin-bottom:12px; 
+            letter-spacing:-0.5px; 
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8); /* <--- DAGDAG ITO */
+        }
+
+        .cta-block p  { 
+            font-size:15px; 
+            color: rgba(255, 255, 255, 0.9); /* Ginawa nating 0.9 para mas maputi/maliwanag yung text */
+            margin-bottom:28px; 
+            max-width:440px; 
+            margin-left:auto; 
+            margin-right:auto; 
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.8); /* <--- DAGDAG ITO */
+        }
 
         /* ── FOOTER ──────────────────────────────── */
         footer {
@@ -1081,31 +1226,56 @@ if (isLoggedIn()) { redirectByRole(); }
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+/* ── MOBILE DRAWER LOGIC ──────────────── */
 function openMobile() {
-    document.getElementById('mobDrawer').classList.add('open');
-    document.getElementById('mobOverlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    const drawer = document.getElementById('mobDrawer');
+    const overlay = document.getElementById('mobOverlay');
+    
+    if (drawer && overlay) {
+        drawer.classList.add('open');
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden'; // Disable scroll sa likod
+    }
 }
 function closeMobile() {
-    document.getElementById('mobDrawer').classList.remove('open');
-    document.getElementById('mobOverlay').classList.remove('open');
-    document.body.style.overflow = '';
+    const drawer = document.getElementById('mobDrawer');
+    const overlay = document.getElementById('mobOverlay');
+    
+    if (drawer && overlay) {
+        drawer.classList.remove('open');
+        overlay.classList.remove('open');
+        document.body.style.overflow = ''; // Enable scroll ulit
+    }
 }
-document.addEventListener('keydown', function(e) { if(e.key==='Escape') closeMobile(); });
-
+// Close pag pinindot ang Escape key
+document.addEventListener('keydown', function(e) { 
+    if(e.key === 'Escape') closeMobile(); 
+});
+/* ── FAQ ACCORDION LOGIC ──────────────── */
 function toggleFaq(card) {
-    var a    = card.querySelector('.faq-a');
-    var icon = card.querySelector('.faq-q i');
-    var open = card.classList.contains('open');
+    const isOpen = card.classList.contains('open');
+    // 1. Isara muna lahat ng ibang bukas na FAQ (Accordion style)
     document.querySelectorAll('.faq-item.open').forEach(function(el) {
-        el.classList.remove('open');
-        el.querySelector('.faq-a').classList.remove('open');
-        el.querySelector('.faq-q i').className = 'bi bi-plus-lg';
+        if (el !== card) { // Huwag isara yung mismong pinindot kung dati na itong bukas
+            el.classList.remove('open');
+            const answer = el.querySelector('.faq-a');
+            const icon = el.querySelector('.faq-q i');
+            if (answer) answer.classList.remove('open');
+            if (icon) icon.className = 'bi bi-plus-lg';
+        }
     });
-    if (!open) {
+    // 2. I-toggle yung pinindot na card
+    const currentAnswer = card.querySelector('.faq-a');
+    const currentIcon = card.querySelector('.faq-q i');
+    
+    if (!isOpen) {
         card.classList.add('open');
-        a.classList.add('open');
-        icon.className = 'bi bi-dash-lg';
+        if (currentAnswer) currentAnswer.classList.add('open');
+        if (currentIcon) currentIcon.className = 'bi bi-dash-lg';
+    } else {
+        card.classList.remove('open');
+        if (currentAnswer) currentAnswer.classList.remove('open');
+        if (currentIcon) currentIcon.className = 'bi bi-plus-lg';
     }
 }
 </script>
