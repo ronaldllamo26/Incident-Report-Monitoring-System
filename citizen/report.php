@@ -189,45 +189,83 @@ $error = $_GET['error'] ?? '';
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ── MAP SETUP ──────────────────────────────────────────
-var map = L.map('map').setView([14.5995, 120.9842], 13);
+// ── QC BOUNDS ─────────────────────────────────────────
+var QC_CENTER = [14.6760, 121.0437];
+var QC_BOUNDS = L.latLngBounds(
+    [14.5800, 120.9800], // southwest
+    [14.7800, 121.1500]  // northeast
+);
+
+function isInsideQC(lat, lng) {
+    return QC_BOUNDS.contains([lat, lng]);
+}
+
+// ── MAP SETUP — locked sa QC ──────────────────────────
+var map = L.map('map', {
+    center: QC_CENTER,
+    zoom: 13,
+    minZoom: 12,        // hindi na makalayo
+    maxZoom: 19,
+    maxBounds: QC_BOUNDS,           // hindi na makapan sa labas
+    maxBoundsViscosity: 1.0         // hard lock — hindi talaga makakaalis
+}).setView(QC_CENTER, 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+}).addTo(map);
+
+// QC boundary rectangle (visual guide)
+L.rectangle(QC_BOUNDS, {
+    color: '#003DA5', weight: 2,
+    fillColor: '#003DA5', fillOpacity: 0.03,
+    dashArray: '6,6', interactive: false
 }).addTo(map);
 
 var marker = null;
 
-// ── PLACE MARKER ───────────────────────────────────────
 function placeMarker(lat, lng, label) {
-    if (marker) map.removeLayer(marker);
+    // Block kung outside QC
+    if (!isInsideQC(lat, lng)) {
+        document.getElementById('pin-status').innerHTML =
+            '<i class="bi bi-x-circle-fill text-danger me-1"></i>' +
+            '<span class="text-danger fw-medium">Hindi pwede — nasa labas ng Quezon City.</span>';
+        return; // ← hindi na mag-p-place ng marker
+    }
 
+    if (marker) map.removeLayer(marker);
     marker = L.marker([lat, lng], { draggable: true }).addTo(map);
     marker.bindPopup(label || 'Pinned location').openPopup();
 
     document.getElementById('latitude').value  = lat.toFixed(8);
     document.getElementById('longitude').value = lng.toFixed(8);
     document.getElementById('pin-status').innerHTML =
-        '<i class="bi bi-check-circle-fill text-success me-1"></i>Na-pin na ang lokasyon.';
+        '<i class="bi bi-check-circle-fill text-success me-1"></i>' +
+        'Na-pin na ang lokasyon sa Quezon City.';
 
     if (label) document.getElementById('location-input').value = label;
 
     marker.on('dragend', function(e) {
         var pos = e.target.getLatLng();
+        if (!isInsideQC(pos.lat, pos.lng)) {
+            // I-snap back sa QC
+            marker.setLatLng([lat, lng]);
+            document.getElementById('pin-status').innerHTML =
+                '<i class="bi bi-x-circle-fill text-danger me-1"></i>' +
+                '<span class="text-danger fw-medium">Hindi pwede — nasa labas ng QC. Na-snap back.</span>';
+            return;
+        }
         document.getElementById('latitude').value  = pos.lat.toFixed(8);
         document.getElementById('longitude').value = pos.lng.toFixed(8);
         reverseGeocode(pos.lat, pos.lng);
     });
 }
 
-// ── CLICK SA MAPA ──────────────────────────────────────
 map.on('click', function(e) {
     placeMarker(e.latlng.lat, e.latlng.lng);
     reverseGeocode(e.latlng.lat, e.latlng.lng);
 });
 
-// ── SEARCH (Nominatim) ─────────────────────────────────
+// ── SEARCH — QC only ───────────────────────────────────
 var searchTimeout = null;
 var searchInput   = document.getElementById('search-input');
 var resultsBox    = document.getElementById('search-results');
@@ -252,28 +290,45 @@ function searchLocation() {
 function doSearch(query) {
     resultsBox.innerHTML =
         '<div class="list-group-item text-muted small">' +
-        '<span class="spinner-border spinner-border-sm me-2"></span>Naghahanap...</div>';
+        '<span class="spinner-border spinner-border-sm me-2"></span>' +
+        'Naghahanap sa Quezon City...</div>';
 
-    fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q='
-        + encodeURIComponent(query) + '&countrycodes=ph', {
-        headers: { 'Accept-Language': 'en', 'User-Agent': 'IRMS-Capstone' }
+    // Strict QC-only search
+    var url = 'https://nominatim.openstreetmap.org/search'
+        + '?format=json&limit=8&addressdetails=1'
+        + '&q=' + encodeURIComponent(query + ' Quezon City Philippines')
+        + '&countrycodes=ph'
+        + '&viewbox=120.98,14.78,121.15,14.58'
+        + '&bounded=1'; // ← strict bounded — QC area lang
+
+    fetch(url, {
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'QC-ALERTO-Capstone' }
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
         resultsBox.innerHTML = '';
-        if (!data.length) {
+
+        // Filter pa rin para sure na QC lang
+        var qcResults = data.filter(function(place) {
+            return isInsideQC(parseFloat(place.lat), parseFloat(place.lon));
+        });
+
+        if (!qcResults.length) {
             resultsBox.innerHTML =
-                '<div class="list-group-item text-muted small">Walang nahanap. Subukan ng ibang address.</div>';
+                '<div class="list-group-item text-muted small">' +
+                '<i class="bi bi-geo me-1"></i>' +
+                'Walang nahanap sa Quezon City. Subukan ng ibang address o barangay.</div>';
             return;
         }
-        data.forEach(function(place) {
-            var item    = document.createElement('button');
-            item.type   = 'button';
+        qcResults.forEach(function(place) {
+            var item = document.createElement('button');
+            item.type = 'button';
             item.className = 'list-group-item list-group-item-action py-2';
-            var name    = place.name || place.display_name.split(',')[0];
+            var name = place.name || place.display_name.split(',')[0];
             item.innerHTML =
-                '<div class="small fw-medium">'    + escHtml(name) + '</div>' +
-                '<div style="font-size:11px;color:#6c757d;">' + escHtml(place.display_name) + '</div>';
+                '<div class="small fw-medium">' + escHtml(name) + '</div>' +
+                '<div style="font-size:11px;color:#6c757d;">' +
+                escHtml(place.display_name) + '</div>';
             item.addEventListener('click', function() {
                 var lat = parseFloat(place.lat);
                 var lng = parseFloat(place.lon);
@@ -287,14 +342,14 @@ function doSearch(query) {
     })
     .catch(function() {
         resultsBox.innerHTML =
-            '<div class="list-group-item text-danger small">Error sa paghahanap. Subukan ulit.</div>';
+            '<div class="list-group-item text-danger small">' +
+            'Error sa paghahanap. Subukan ulit.</div>';
     });
 }
 
-// ── REVERSE GEOCODE ────────────────────────────────────
 function reverseGeocode(lat, lng) {
     fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng, {
-        headers: { 'Accept-Language': 'en', 'User-Agent': 'IRMS-Capstone' }
+        headers: { 'Accept-Language': 'en', 'User-Agent': 'QC-ALERTO-Capstone' }
     })
     .then(function(res) { return res.json(); })
     .then(function(data) {
@@ -302,11 +357,9 @@ function reverseGeocode(lat, lng) {
             document.getElementById('location-input').value = data.display_name;
             if (marker) marker.bindPopup(data.display_name).openPopup();
         }
-    })
-    .catch(function() {});
+    }).catch(function() {});
 }
 
-// ── MY LOCATION ────────────────────────────────────────
 function useMyLocation(event) {
     if (!navigator.geolocation) {
         alert('Hindi sinusuportahan ng browser mo ang geolocation.');
@@ -315,7 +368,6 @@ function useMyLocation(event) {
     var btn = event.currentTarget;
     btn.disabled  = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Kumuha ng lokasyon...';
-
     navigator.geolocation.getCurrentPosition(
         function(pos) {
             var lat = pos.coords.latitude;
@@ -327,21 +379,19 @@ function useMyLocation(event) {
             btn.innerHTML = '<i class="bi bi-geo-alt me-1"></i> Gamitin ang aking lokasyon';
         },
         function() {
-            alert('Hindi makuha ang lokasyon. I-allow ang location permission sa browser.');
+            alert('Hindi makuha ang lokasyon. I-allow ang location permission.');
             btn.disabled  = false;
             btn.innerHTML = '<i class="bi bi-geo-alt me-1"></i> Gamitin ang aking lokasyon';
         }
     );
 }
 
-// ── HIDE RESULTS pag nag-click sa labas ───────────────
 document.addEventListener('click', function(e) {
     if (!resultsBox.contains(e.target) && e.target !== searchInput) {
         resultsBox.innerHTML = '';
     }
 });
 
-// ── IMAGE PREVIEW ──────────────────────────────────────
 function previewImages(event) {
     var preview = document.getElementById('image-preview');
     preview.innerHTML = '';
@@ -354,8 +404,8 @@ function previewImages(event) {
     Array.from(files).forEach(function(file) {
         var reader = new FileReader();
         reader.onload = function(e) {
-            var img       = document.createElement('img');
-            img.src       = e.target.result;
+            var img = document.createElement('img');
+            img.src = e.target.result;
             img.className = 'preview-img';
             preview.appendChild(img);
         };
@@ -363,15 +413,23 @@ function previewImages(event) {
     });
 }
 
-// ── FORM VALIDATION ────────────────────────────────────
 document.getElementById('report-form').addEventListener('submit', function(e) {
     if (!document.getElementById('latitude').value) {
         e.preventDefault();
         alert('I-pin muna ang lokasyon sa mapa bago mag-submit.');
+        return;
+    }
+    var lat = parseFloat(document.getElementById('latitude').value);
+    var lng = parseFloat(document.getElementById('longitude').value);
+    if (!isInsideQC(lat, lng)) {
+        e.preventDefault();
+        alert('Hindi pwedeng mag-submit! Ang lokasyon ay nasa labas ng Quezon City.\n\nAng QC-ALERTO ay para lamang sa mga insidente sa loob ng Quezon City. I-pin muli ang tamang lokasyon.');
+        document.getElementById('pin-status').innerHTML =
+            '<i class="bi bi-x-circle-fill text-danger me-1"></i>' +
+            '<span class="text-danger fw-medium">Error: Nasa labas ng Quezon City ang lokasyon. I-pin muli.</span>';
     }
 });
 
-// ── HELPER ────────────────────────────────────────────
 function escHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
