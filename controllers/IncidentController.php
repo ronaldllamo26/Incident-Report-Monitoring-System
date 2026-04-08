@@ -18,16 +18,31 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat      = $_POST['latitude']          ?? null;
     $lng      = $_POST['longitude']         ?? null;
 
+    // Basic validation
     if (!$title || !$cat || !$severity || !$desc || !$location) {
         header('Location: /irms/citizen/report.php?error=' .
                urlencode('Punan ang lahat ng required fields.'));
         exit;
     }
+
     if (!$lat || !$lng) {
         header('Location: /irms/citizen/report.php?error=' .
                urlencode('I-pin muna ang lokasyon sa mapa.'));
         exit;
     }
+
+    // ── QC BOUNDS VALIDATION (server-side) ────────────
+    $lat = floatval($lat);
+    $lng = floatval($lng);
+
+    if ($lat < 14.4764 || $lat > 14.7800 ||
+        $lng < 120.9980 || $lng > 121.1764) {
+        header('Location: /irms/citizen/report.php?error=' .
+               urlencode('Hindi pwedeng mag-submit — ang lokasyon ay nasa labas ng Quezon City. ' .
+                         'Ang QC-ALERTO ay para lamang sa mga insidente sa loob ng QC.'));
+        exit;
+    }
+    // ── END QC VALIDATION ──────────────────────────────
 
     // Generate tracking number
     $tracking = 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
@@ -43,7 +58,7 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $user['id'], $cat, $title, $desc,
         $location, $lat, $lng, $severity, $tracking
     ]);
-    $incidentId = $pdo->lastInsertId(); // ← DITO DAPAT ITO
+    $incidentId = $pdo->lastInsertId();
 
     // Auto-assign + SLA + Priority
     $model = new Incident();

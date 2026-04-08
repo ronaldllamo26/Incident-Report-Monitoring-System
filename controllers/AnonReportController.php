@@ -4,39 +4,52 @@ require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: /irms/public/anonymous_report.php');
+    header('Location: /irms/public/report.php');
     exit;
 }
 
-$title    = trim($_POST['title']        ?? '');
-$cat      = (int)($_POST['category_id'] ?? 0);
-$severity = $_POST['severity']          ?? '';
-$desc     = trim($_POST['description']  ?? '');
-$location = trim($_POST['location']     ?? '');
-$lat      = $_POST['latitude']          ?? null;
-$lng      = $_POST['longitude']         ?? null;
-$anonName  = trim($_POST['anon_name']   ?? '');
-$anonEmail = trim($_POST['anon_email']  ?? '');
-$anonPhone = trim($_POST['anon_phone']  ?? '');
+$title     = trim($_POST['title']        ?? '');
+$cat       = (int)($_POST['category_id'] ?? 0);
+$severity  = $_POST['severity']          ?? '';
+$desc      = trim($_POST['description']  ?? '');
+$location  = trim($_POST['location']     ?? '');
+$lat       = $_POST['latitude']          ?? null;
+$lng       = $_POST['longitude']         ?? null;
+$anonName  = trim($_POST['anon_name']    ?? '');
+$anonEmail = trim($_POST['anon_email']   ?? '');
+$anonPhone = trim($_POST['anon_phone']   ?? '');
 
-// Validation
+// Basic validation
 if (!$title || !$cat || !$severity || !$desc || !$location) {
-    header('Location: /irms/public/anonymous_report.php?error=' .
+    header('Location: /irms/public/report.php?error=' .
            urlencode('Punan ang lahat ng required fields.'));
     exit;
 }
 
 if (!$lat || !$lng) {
-    header('Location: /irms/public/anonymous_report.php?error=' .
+    header('Location: /irms/public/report.php?error=' .
            urlencode('I-pin muna ang lokasyon sa mapa.'));
     exit;
 }
 
 if ($anonEmail && !filter_var($anonEmail, FILTER_VALIDATE_EMAIL)) {
-    header('Location: /irms/public/anonymous_report.php?error=' .
+    header('Location: /irms/public/report.php?error=' .
            urlencode('Hindi valid ang email address.'));
     exit;
 }
+
+// ── QC BOUNDS VALIDATION (server-side) ────────────────
+$lat = floatval($lat);
+$lng = floatval($lng);
+
+if ($lat < 14.4764 || $lat > 14.7800 ||
+    $lng < 120.9980 || $lng > 121.1764) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Hindi pwedeng mag-submit — ang lokasyon ay nasa labas ng Quezon City. ' .
+                     'Ang QC-ALERTO ay para lamang sa mga insidente sa loob ng QC.'));
+    exit;
+}
+// ── END QC VALIDATION ──────────────────────────────────
 
 // Generate unique tracking number — format: IRMS-YYYYMMDD-XXXXX
 $tracking = 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
@@ -53,7 +66,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([
     $cat, $title, $desc, $location,
     $lat, $lng, $severity,
-    $anonName ?: null,
+    $anonName  ?: null,
     $anonEmail ?: null,
     $anonPhone ?: null,
     $tracking
@@ -97,7 +110,7 @@ if (!empty($_FILES['photos']['name'][0])) {
 logAudit($pdo, null, 'anonymous_report_submitted', 'incident', $incidentId,
     "Anonymous report submitted. Tracking: {$tracking}");
 
-// Redirect sa success page na may tracking number
+// Redirect sa success page
 header('Location: /irms/public/report_success.php?tracking=' .
        urlencode($tracking) . '&id=' . $incidentId);
 exit;

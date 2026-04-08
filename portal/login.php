@@ -24,21 +24,21 @@ $success = $_GET['success'] ?? '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+    <style>
         * { box-sizing: border-box; }
         :root {
-            --navy:  #0f172a;
-            --navy2: #1e293b;
-            --navy3: #334155;
-            --text:  #f8fafc;
-            --muted: #94a3b8;
-            --border: rgba(255,255,255,0.08);
-            --accent: #6366f1;
-            --accent2: #4f46e5;
+            --qa-blue: #002D7A;
+            --qa-blue-dark: #001A4A;
+            --qa-orange: #F5A623;
+            --qa-orange-hover: #D88E1B;
+            --text-main: #333333;
+            --text-muted: #6c757d;
+            --bg-body: #f8f9fa;
         }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--navy);
-            color: var(--text);
+            background: var(--bg-body);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -48,21 +48,16 @@ $success = $_GET['success'] ?? '';
             position: relative;
             overflow: hidden;
         }
+        
+        /* City Skyline / Background Abstract (Optional subtle effect) */
         body::before {
             content: '';
             position: fixed;
-            top: -200px; right: -200px;
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%);
-            pointer-events: none;
-        }
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -100px; left: -100px;
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(99,102,241,0.04) 0%, transparent 70%);
-            pointer-events: none;
+            top: 0; left: 0; right: 0;
+            height: 250px;
+            background: var(--qa-blue);
+            z-index: 0;
+            border-bottom: 4px solid var(--qa-orange);
         }
 
         .login-wrap {
@@ -71,72 +66,68 @@ $success = $_GET['success'] ?? '';
             position: relative;
             z-index: 1;
         }
-
-        /* Brand */
         .brand {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
         }
         .brand-icon {
-            width: 64px; height: 64px;
-            background: rgba(99,102,241,0.12);
-            border: 1px solid rgba(99,102,241,0.2);
-            border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 28px;
-            margin: 0 auto 16px;
-            color: #a5b4fc;
+            width: 80px; height: 80px;
+            margin: 0 auto 12px;
+            background: #fff;
+            border-radius: 50%;
+            padding: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .brand-icon img {
+            width: 100%; height: 100%;
+            object-fit: contain;
         }
         .brand-title {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
             letter-spacing: -0.5px;
             margin-bottom: 4px;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .brand-sub {
-            font-size: 14px;
-            color: var(--muted);
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 12px;
         }
-
-        /* Staff badge */
         .staff-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(99,102,241,0.1);
-            border: 1px solid rgba(99,102,241,0.2);
-            color: #a5b4fc;
-            font-size: 11px;
+            background: var(--qa-orange);
+            color: #fff;
+            font-size: 10px;
             font-weight: 700;
             padding: 4px 12px;
             border-radius: 20px;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(245, 166, 35, 0.4);
         }
-
-        /* Card */
         .login-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 20px;
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 16px;
             padding: 32px;
-            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
-
-        /* Form */
         .form-label-custom {
             font-size: 13px;
             font-weight: 600;
-            color: var(--muted);
+            color: var(--text-main);
             margin-bottom: 6px;
             display: block;
         }
         .form-control-custom {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: #f8f9fa;
+            border: 1px solid #ced4da;
             border-radius: 10px;
-            color: var(--text);
+            color: var(--text-main);
             font-size: 14px;
             padding: 12px 16px;
             width: 100%;
@@ -145,19 +136,17 @@ $success = $_GET['success'] ?? '';
         }
         .form-control-custom:focus {
             outline: none;
-            border-color: rgba(99,102,241,0.5);
-            background: rgba(255,255,255,0.07);
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+            border-color: var(--qa-blue);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(0, 45, 122, 0.15);
         }
-        .form-control-custom::placeholder { color: #475569; }
-        .input-group-custom {
-            position: relative;
-        }
+        .form-control-custom::placeholder { color: #adb5bd; }
+        .input-group-custom { position: relative; }
         .input-icon {
             position: absolute;
             left: 14px; top: 50%;
             transform: translateY(-50%);
-            color: #475569;
+            color: #6c757d;
             font-size: 16px;
             pointer-events: none;
         }
@@ -166,7 +155,7 @@ $success = $_GET['success'] ?? '';
             position: absolute;
             right: 14px; top: 50%;
             transform: translateY(-50%);
-            color: #475569;
+            color: #6c757d;
             cursor: pointer;
             background: none;
             border: none;
@@ -174,11 +163,9 @@ $success = $_GET['success'] ?? '';
             font-size: 16px;
             transition: color 0.2s;
         }
-        .toggle-pass:hover { color: var(--muted); }
-
-        /* Button */
+        .toggle-pass:hover { color: var(--qa-blue); }
         .btn-login {
-            background: var(--accent);
+            background: var(--qa-blue);
             color: #fff;
             border: none;
             padding: 13px 20px;
@@ -193,38 +180,33 @@ $success = $_GET['success'] ?? '';
             align-items: center;
             justify-content: center;
             gap: 8px;
-            box-shadow: 0 4px 16px rgba(99,102,241,0.25);
+            box-shadow: 0 4px 12px rgba(0, 45, 122, 0.2);
         }
         .btn-login:hover {
-            background: var(--accent2);
+            background: var(--qa-blue-dark);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(99,102,241,0.35);
+            box-shadow: 0 6px 16px rgba(0, 45, 122, 0.3);
         }
-        .btn-login:active { transform: translateY(0); }
-
-        /* Alert */
         .alert-custom {
-            background: rgba(239,68,68,0.1);
-            border: 1px solid rgba(239,68,68,0.2);
+            background: #f8d7da;
+            border: 1px solid #f5c2c7;
             border-radius: 10px;
             padding: 12px 16px;
             font-size: 13px;
-            color: #fca5a5;
+            color: #842029;
             display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 20px;
         }
         .alert-unauthorized {
-            background: rgba(245,158,11,0.1);
-            border: 1px solid rgba(245,158,11,0.2);
-            color: #fcd34d;
+            background: #fff3cd;
+            border: 1px solid #ffecb5;
+            color: #664d03;
         }
-
-        /* Role info */
         .role-info {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid var(--border);
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
             border-radius: 12px;
             padding: 14px 16px;
             margin-top: 20px;
@@ -232,7 +214,7 @@ $success = $_GET['success'] ?? '';
         .role-info-title {
             font-size: 11px;
             font-weight: 700;
-            color: var(--muted);
+            color: var(--text-muted);
             letter-spacing: 1px;
             text-transform: uppercase;
             margin-bottom: 10px;
@@ -242,7 +224,7 @@ $success = $_GET['success'] ?? '';
             align-items: center;
             gap: 8px;
             font-size: 13px;
-            color: var(--muted);
+            color: var(--text-muted);
             padding: 4px 0;
         }
         .role-dot {
@@ -250,24 +232,6 @@ $success = $_GET['success'] ?? '';
             border-radius: 50%;
             flex-shrink: 0;
         }
-
-        /* Back link */
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .back-link a {
-            font-size: 13px;
-            color: var(--muted);
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            transition: color 0.2s;
-        }
-        .back-link a:hover { color: var(--text); }
-
-        /* Divider */
         .form-divider {
             display: flex;
             align-items: center;
@@ -279,13 +243,30 @@ $success = $_GET['success'] ?? '';
             content: '';
             flex: 1;
             height: 1px;
-            background: var(--border);
+            background: #e9ecef;
         }
         .form-divider span {
             font-size: 11px;
-            color: var(--muted);
+            color: var(--text-muted);
             white-space: nowrap;
+            text-transform: uppercase;
+            font-weight: 600;
         }
+        .back-link {
+            text-align: center;
+            margin-top: 16px;
+        }
+        .back-link a {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+        .back-link a:hover { color: var(--qa-blue); }
     </style>
 </head>
 <body>
@@ -295,14 +276,14 @@ $success = $_GET['success'] ?? '';
     <!-- Brand -->
     <div class="brand">
         <div class="brand-icon">
-            <i class="bi bi-shield-lock"></i>
+            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC Logo">
         </div>
+        <div class="brand-title">QC-ALERTO</div>
+        <div class="brand-sub">Para lamang sa mga admin at responder</div>
         <div class="staff-badge">
-            <i class="bi bi-lock-fill" style="font-size:9px;"></i>
+            <i class="bi bi-lock-fill" style="font-size:10px;"></i>
             Staff Portal
         </div>
-        <div class="brand-title">IRMS Staff Portal</div>
-        <div class="brand-sub">Para lamang sa mga admin at responder</div>
     </div>
 
     <!-- Login card -->
@@ -358,12 +339,12 @@ $success = $_GET['success'] ?? '';
         <div class="role-info">
             <div class="role-info-title">Mga may access dito</div>
             <div class="role-badge-item">
-                <div class="role-dot" style="background:#ef4444;"></div>
-                <span><strong style="color:var(--text);">Admin</strong> — Full system access, manage incidents, users, reports</span>
+                <div class="role-dot" style="background:#dc3545;"></div>
+                <span><strong style="color:var(--text-main);">Admin</strong> — Full system access, manage incidents, users, reports</span>
             </div>
             <div class="role-badge-item">
-                <div class="role-dot" style="background:#10b981;"></div>
-                <span><strong style="color:var(--text);">Responder</strong> — View at i-update ang assigned incidents</span>
+                <div class="role-dot" style="background:#198754;"></div>
+                <span><strong style="color:var(--text-main);">Responder</strong> — View at i-update ang assigned incidents</span>
             </div>
         </div>
 
@@ -376,8 +357,9 @@ $success = $_GET['success'] ?? '';
         </a>
     </div>
     <div class="back-link" style="margin-top:8px;">
-        <a href="/irms/citizen/login.php" style="color:#6366f1;">
-            <i class="bi bi-person-circle"></i> Citizen? Mag-login dito
+        <span class="text-muted small">Citizen?</span>
+        <a href="/irms/citizen/login.php" style="color:var(--qa-blue); font-weight:700; margin-left:4px;">
+            Mag-login dito
         </a>
     </div>
 

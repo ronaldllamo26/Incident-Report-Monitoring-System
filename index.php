@@ -1225,6 +1225,11 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Turf.js (REQUIRED for QC boundary checking) -->
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+<!-- QC Map Script -->
+<script src="/irms/assets/js/qc-map.js"></script>
 <script>
 /* ── MOBILE DRAWER LOGIC ──────────────── */
 function openMobile() {
@@ -1280,4 +1285,5 @@ function toggleFaq(card) {
 }
 </script>
 </body>
+
 </html>

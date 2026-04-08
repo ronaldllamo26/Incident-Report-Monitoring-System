@@ -17,18 +17,18 @@ $success = $_GET['success'] ?? '';
     <style>
         * { box-sizing: border-box; }
         :root {
-            --navy:   #0f172a;
-            --navy2:  #1e293b;
-            --text:   #f8fafc;
-            --muted:  #94a3b8;
-            --border: rgba(255,255,255,0.08);
-            --accent: #3b82f6;
-            --accent2:#2563eb;
+            --qa-blue: #002D7A;
+            --qa-blue-dark: #001A4A;
+            --qa-orange: #F5A623;
+            --qa-orange-hover: #D88E1B;
+            --text-main: #333333;
+            --text-muted: #6c757d;
+            --bg-body: #f8f9fa;
         }
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--navy);
-            color: var(--text);
+            background: var(--bg-body);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -38,22 +38,18 @@ $success = $_GET['success'] ?? '';
             position: relative;
             overflow: hidden;
         }
+        
+        /* City Skyline / Background Abstract (Optional subtle effect) */
         body::before {
             content: '';
             position: fixed;
-            top: -200px; right: -200px;
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
-            pointer-events: none;
+            top: 0; left: 0; right: 0;
+            height: 250px;
+            background: var(--qa-blue);
+            z-index: 0;
+            border-bottom: 4px solid var(--qa-orange);
         }
-        body::after {
-            content: '';
-            position: fixed;
-            bottom: -100px; left: -100px;
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(59,130,246,0.04) 0%, transparent 70%);
-            pointer-events: none;
-        }
+
         .login-wrap {
             width: 100%;
             max-width: 420px;
@@ -62,62 +58,66 @@ $success = $_GET['success'] ?? '';
         }
         .brand {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 24px;
         }
         .brand-icon {
-            width: 64px; height: 64px;
-            background: rgba(59,130,246,0.12);
-            border: 1px solid rgba(59,130,246,0.2);
-            border-radius: 16px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 28px;
-            margin: 0 auto 16px;
-            color: #93c5fd;
+            width: 80px; height: 80px;
+            margin: 0 auto 12px;
+            background: #fff;
+            border-radius: 50%;
+            padding: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .brand-icon img {
+            width: 100%; height: 100%;
+            object-fit: contain;
         }
         .brand-title {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
             letter-spacing: -0.5px;
             margin-bottom: 4px;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
         .brand-sub {
-            font-size: 14px;
-            color: var(--muted);
+            font-size: 13px;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 12px;
         }
         .citizen-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(59,130,246,0.1);
-            border: 1px solid rgba(59,130,246,0.2);
-            color: #93c5fd;
-            font-size: 11px;
+            background: var(--qa-orange);
+            color: #fff;
+            font-size: 10px;
             font-weight: 700;
             padding: 4px 12px;
             border-radius: 20px;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
-            margin-bottom: 8px;
+            box-shadow: 0 2px 8px rgba(245, 166, 35, 0.4);
         }
         .login-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 20px;
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 16px;
             padding: 32px;
-            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         }
         .form-label-custom {
             font-size: 13px;
             font-weight: 600;
-            color: var(--muted);
+            color: var(--text-main);
             margin-bottom: 6px;
             display: block;
         }
         .form-control-custom {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: #f8f9fa;
+            border: 1px solid #ced4da;
             border-radius: 10px;
-            color: var(--text);
+            color: var(--text-main);
             font-size: 14px;
             padding: 12px 16px;
             width: 100%;
@@ -126,17 +126,17 @@ $success = $_GET['success'] ?? '';
         }
         .form-control-custom:focus {
             outline: none;
-            border-color: rgba(59,130,246,0.5);
-            background: rgba(255,255,255,0.07);
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+            border-color: var(--qa-blue);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(0, 45, 122, 0.15);
         }
-        .form-control-custom::placeholder { color: #475569; }
+        .form-control-custom::placeholder { color: #adb5bd; }
         .input-group-custom { position: relative; }
         .input-icon {
             position: absolute;
             left: 14px; top: 50%;
             transform: translateY(-50%);
-            color: #475569;
+            color: #6c757d;
             font-size: 16px;
             pointer-events: none;
         }
@@ -145,7 +145,7 @@ $success = $_GET['success'] ?? '';
             position: absolute;
             right: 14px; top: 50%;
             transform: translateY(-50%);
-            color: #475569;
+            color: #6c757d;
             cursor: pointer;
             background: none;
             border: none;
@@ -153,9 +153,9 @@ $success = $_GET['success'] ?? '';
             font-size: 16px;
             transition: color 0.2s;
         }
-        .toggle-pass:hover { color: var(--muted); }
+        .toggle-pass:hover { color: var(--qa-blue); }
         .btn-login {
-            background: var(--accent);
+            background: var(--qa-blue);
             color: #fff;
             border: none;
             padding: 13px 20px;
@@ -170,32 +170,32 @@ $success = $_GET['success'] ?? '';
             align-items: center;
             justify-content: center;
             gap: 8px;
-            box-shadow: 0 4px 16px rgba(59,130,246,0.25);
+            box-shadow: 0 4px 12px rgba(0, 45, 122, 0.2);
         }
         .btn-login:hover {
-            background: var(--accent2);
+            background: var(--qa-blue-dark);
             transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(59,130,246,0.35);
+            box-shadow: 0 6px 16px rgba(0, 45, 122, 0.3);
         }
         .alert-custom {
-            background: rgba(239,68,68,0.1);
-            border: 1px solid rgba(239,68,68,0.2);
+            background: #f8d7da;
+            border: 1px solid #f5c2c7;
             border-radius: 10px;
             padding: 12px 16px;
             font-size: 13px;
-            color: #fca5a5;
+            color: #842029;
             display: flex;
             align-items: center;
             gap: 8px;
             margin-bottom: 20px;
         }
         .alert-success-custom {
-            background: rgba(16,185,129,0.1);
-            border: 1px solid rgba(16,185,129,0.2);
+            background: #d1e7dd;
+            border: 1px solid #badbcc;
             border-radius: 10px;
             padding: 12px 16px;
             font-size: 13px;
-            color: #6ee7b7;
+            color: #0f5132;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -211,11 +211,32 @@ $success = $_GET['success'] ?? '';
             content: '';
             flex: 1;
             height: 1px;
-            background: var(--border);
+            background: #e9ecef;
         }
         .divider span {
             font-size: 11px;
-            color: var(--muted);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .btn-register {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 2px solid var(--qa-orange);
+            color: var(--qa-orange);
+            background: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-register:hover {
+            background: var(--qa-orange);
+            color: #fff;
         }
         .back-link {
             text-align: center;
@@ -223,14 +244,15 @@ $success = $_GET['success'] ?? '';
         }
         .back-link a {
             font-size: 13px;
-            color: var(--muted);
+            color: var(--text-muted);
             text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 5px;
             transition: color 0.2s;
+            font-weight: 500;
         }
-        .back-link a:hover { color: var(--text); }
+        .back-link a:hover { color: var(--qa-blue); }
     </style>
 </head>
 <body>
@@ -240,14 +262,14 @@ $success = $_GET['success'] ?? '';
     <!-- Brand -->
     <div class="brand">
         <div class="brand-icon">
-            <i class="bi bi-shield-check"></i>
+            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC Logo">
         </div>
+        <div class="brand-title">QC-ALERTO</div>
+        <div class="brand-sub">Incident Report & Monitoring System</div>
         <div class="citizen-badge">
-            <i class="bi bi-person-fill" style="font-size:9px;"></i>
+            <i class="bi bi-people-fill" style="font-size:10px;"></i>
             Citizen Portal
         </div>
-        <div class="brand-title">IRMS</div>
-        <div class="brand-sub">Incident Report & Monitoring System</div>
     </div>
 
     <!-- Login card -->
@@ -300,13 +322,7 @@ $success = $_GET['success'] ?? '';
 
         <div class="divider"><span>wala pang account?</span></div>
 
-        <a href="/irms/citizen/register.php"
-           style="display:flex;align-items:center;justify-content:center;gap:8px;
-                  padding:12px;border-radius:10px;border:1px solid var(--border);
-                  color:var(--muted);font-size:14px;font-weight:600;
-                  text-decoration:none;transition:all 0.2s;"
-           onmouseover="this.style.color='#f8fafc';this.style.borderColor='rgba(255,255,255,0.2)'"
-           onmouseout="this.style.color='#94a3b8';this.style.borderColor='rgba(255,255,255,0.08)'">
+        <a href="/irms/citizen/register.php" class="btn-register">
             <i class="bi bi-person-plus"></i> Mag-register
         </a>
 
