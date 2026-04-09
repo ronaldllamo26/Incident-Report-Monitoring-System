@@ -21,15 +21,16 @@ if (!$incident) {
     exit;
 }
 
-// Determine redirect back — admin o responder
+// Determine redirect — admin o responder
 $back = $_SESSION['role'] === 'admin'
     ? '/irms/portal/admin/view_incident.php?id=' . $id
     : '/irms/portal/responder/view_incident.php?id=' . $id;
 
+// ── UPDATE STATUS ──────────────────────────────────────
 if ($action === 'update_status') {
     $newStatus = $_POST['new_status'] ?? '';
     $remarks   = trim($_POST['remarks'] ?? '');
-    $oldStatus = $_POST['old_status']  ?? $incident['status'];
+    $oldStatus = $incident['status']; // Kuha sa DB — hindi sa POST para sure
 
     $allowed = ['pending', 'in_progress', 'resolved', 'closed'];
     if (!in_array($newStatus, $allowed)) {
@@ -37,58 +38,82 @@ if ($action === 'update_status') {
         exit;
     }
 
+    // ── STATUS TRANSITION VALIDATION ──────────────────
+    // Prevent illegal transitions
+    $validTransitions = [
+        'pending'     => ['in_progress', 'closed'],
+        'in_progress' => ['resolved', 'closed', 'pending'],
+        'resolved'    => ['closed'],
+        'closed'      => [], // closed = final, walang pwedeng transition
+    ];
+
+    if (!in_array($newStatus, $validTransitions[$oldStatus] ?? [])) {
+        header('Location: ' . $back . '&error=' .
+               urlencode('Hindi pwedeng i-change ang status mula ' .
+                         ucwords(str_replace('_', ' ', $oldStatus)) . ' papunta ' .
+                         ucwords(str_replace('_', ' ', $newStatus)) . '.'));
+        exit;
+    }
+    // ──────────────────────────────────────────────────
+
+    // I-update ang status at mag-log
     $model->updateStatus($id, $newStatus, $user['id'], $oldStatus, $remarks);
 
-    // ── ACKNOWLEDGE TIMESTAMP ──────────────────
-    if ($newStatus === 'in_progress' && $oldStatus === 'pending') {
-        $pdo->prepare("UPDATE incidents SET acknowledged_at = NOW() WHERE id = ?")
-            ->execute([$id]);
-    }
-    // ──────────────────────────────────────────
-
-    // ── EMAIL NOTIFICATION ─────────────────────
+    // ── EMAIL NOTIFICATION ─────────────────────────────
     $fullIncident = $model->getById($id);
 
     if ($fullIncident) {
         $citizenEmail = null;
+        $citizenName  = 'Anonymous';
 
-        if ($fullIncident['reporter_id']) {
+        if (!empty($fullIncident['reporter_id'])) {
             $stmt = $pdo->prepare("SELECT email, name FROM users WHERE id = ?");
             $stmt->execute([$fullIncident['reporter_id']]);
             $citizen = $stmt->fetch();
             if ($citizen) {
                 $citizenEmail = $citizen['email'];
-                $fullIncident['reporter_name'] = $citizen['name'];
+                $citizenName  = $citizen['name'];
             }
         } elseif (!empty($fullIncident['anon_email'])) {
             $citizenEmail = $fullIncident['anon_email'];
-            $fullIncident['reporter_name'] = $fullIncident['anon_name'] ?: 'Anonymous';
+            $citizenName  = $fullIncident['anon_name'] ?: 'Anonymous';
         }
+
+        $fullIncident['reporter_name'] = $citizenName;
 
         if ($citizenEmail) {
             sendMail(
                 $citizenEmail,
-                'Status Update sa Iyong Report #' . $id . ' — IRMS',
+                'Status Update sa Iyong Report #' . $id . ' — QC-ALERTO',
                 mailStatusUpdate($fullIncident, $newStatus, $remarks)
             );
         }
     }
-    // ──────────────────────────────────────────
+    // ──────────────────────────────────────────────────
 
-    header('Location: ' . $back . '&success=' . urlencode('Na-update na ang status.'));
+    header('Location: ' . $back . '&success=' .
+           urlencode('Na-update na ang status sa ' .
+                     ucwords(str_replace('_', ' ', $newStatus)) . '.'));
     exit;
 }
 
+// ── ADD RESPONSE / COMMENT ─────────────────────────────
 if ($action === 'respond') {
     $message = trim($_POST['message'] ?? '');
+
     if (empty($message)) {
-        header('Location: ' . $back . '&error=' . urlencode('Hindi pwedeng blank ang response.'));
+        header('Location: ' . $back . '&error=' .
+               urlencode('Hindi pwedeng blank ang response.'));
         exit;
     }
+
     $model->addResponse($id, $user['id'], $message);
-    header('Location: ' . $back . '&success=' . urlencode('Na-send na ang response.'));
+
+    header('Location: ' . $back . '&success=' .
+           urlencode('Na-send na ang response.'));
     exit;
 }
 
+// Fallback
 header('Location: ' . $back);
 exit;

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../models/User.php';
 
 class AuthController {
+
     private User $user;
 
     public function __construct() {
@@ -12,83 +13,90 @@ class AuthController {
     public function login(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') return;
 
-        $email    = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        
-        // Kunin ang portal type (galing sa hidden input ng login form)
+        $email    = trim($_POST['email']    ?? '');
+        $password = $_POST['password']      ?? '';
+
+        // ── PORTAL DETECTION ──────────────────────────────
+        // Priority: POST > GET > HTTP_REFERER auto-detect
         $portal = $_POST['portal'] ?? $_GET['portal'] ?? '';
+
+        // Auto-detect kung wala sa POST/GET
+        // Pag galing sa /portal/ URL, staff yan
+        if (empty($portal)) {
+            $referer = $_SERVER['HTTP_REFERER'] ?? '';
+            if (strpos($referer, '/irms/portal/') !== false) {
+                $portal = 'staff';
+            }
+        }
 
         // Basic validation
         if (empty($email) || empty($password)) {
-            $this->redirectWithError('login', 'Punan ang lahat ng fields.');
+            $this->redirectWithError('Punan ang lahat ng fields.', $portal);
             return;
         }
 
         $user = $this->user->findByEmail($email);
 
         if (!$user || !password_verify($password, $user['password'])) {
-            $this->redirectWithError('login', 'Mali ang email o password.');
+            $this->redirectWithError('Mali ang email o password.', $portal);
             return;
         }
 
-        // --- START NG PORTAL VALIDATION LOGIC ---
+        // ── PORTAL VALIDATION ─────────────────────────────
 
-        // 1. Kung nasa Staff Portal login pero ang role ay 'citizen' — i-block.
+        // Staff portal → citizen role = BLOCK
         if ($portal === 'staff' && $user['role'] === 'citizen') {
-            $this->redirectWithError('login', 'Walang access sa Staff Portal.', 'portal');
+            $this->redirectWithError(
+                'Walang access sa Staff Portal. Gamitin ang Citizen login.',
+                'staff'
+            );
             return;
         }
 
-        // 2. Kung nasa Citizen login pero ang role ay Staff (admin/responder) 
-        // — i-redirect sila sa tamang login page ng portal.
+        // Citizen portal → staff role = redirect sa staff portal
         if ($portal !== 'staff' && in_array($user['role'], ['admin', 'responder'])) {
-            header('Location: /irms/portal/login.php?error=' . urlencode('Dito ka dapat mag-login sa Staff Portal.'));
+            header('Location: /irms/portal/login.php?error=' .
+                   urlencode('Para sa mga staff, mag-login dito sa Staff Portal.'));
             exit;
         }
 
-        // --- END NG PORTAL VALIDATION LOGIC ---
-
-        // Set session
+        // ── SET SESSION ───────────────────────────────────
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
         $_SESSION['role']    = $user['role'];
 
+        // ── REDIRECT BASED ON ROLE ────────────────────────
         redirectByRole();
     }
 
     public function register(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') return;
 
-        $name     = trim($_POST['name'] ?? '');
-        $email    = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $confirm  = $_POST['confirm_password'] ?? '';
-        $phone    = trim($_POST['phone'] ?? '');
-        $address  = trim($_POST['address'] ?? '');
+        $name     = trim($_POST['name']             ?? '');
+        $email    = trim($_POST['email']            ?? '');
+        $password = $_POST['password']              ?? '';
+        $confirm  = $_POST['confirm_password']      ?? '';
+        $phone    = trim($_POST['phone']            ?? '');
+        $address  = trim($_POST['address']          ?? '');
 
-        // Validation
         if (empty($name) || empty($email) || empty($password)) {
-            $this->redirectWithError('register', 'Punan ang lahat ng required fields.');
+            $this->redirectWithError('Punan ang lahat ng required fields.', 'citizen', 'register');
             return;
         }
-
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->redirectWithError('register', 'Hindi valid ang email address.');
+            $this->redirectWithError('Hindi valid ang email address.', 'citizen', 'register');
             return;
         }
-
         if (strlen($password) < 8) {
-            $this->redirectWithError('register', 'Dapat 8 characters minimum ang password.');
+            $this->redirectWithError('Dapat 8 characters minimum ang password.', 'citizen', 'register');
             return;
         }
-
         if ($password !== $confirm) {
-            $this->redirectWithError('register', 'Hindi magkapareho ang password.');
+            $this->redirectWithError('Hindi magkapareho ang password.', 'citizen', 'register');
             return;
         }
-
         if ($this->user->emailExists($email)) {
-            $this->redirectWithError('register', 'Ginagamit na ang email na yan.');
+            $this->redirectWithError('Ginagamit na ang email na yan.', 'citizen', 'register');
             return;
         }
 
@@ -103,29 +111,41 @@ class AuthController {
         if ($created) {
             header('Location: /irms/citizen/login.php?success=registered');
         } else {
-            $this->redirectWithError('register', 'May error sa pagre-register. Subukan ulit.');
+            $this->redirectWithError('May error sa pagre-register. Subukan ulit.', 'citizen', 'register');
         }
         exit;
     }
 
     public function logout(): void {
-    session_destroy();
-    header('Location: /irms/index.php');
-    exit;
-}
+        session_destroy();
+        header('Location: /irms/index.php');
+        exit;
+    }
 
     /**
-     * Modified redirect helper para ma-handle kung staff or citizen ang error redirection
+     * Redirect with error — alam na kung staff o citizen ang portal
+     *
+     * @param string $msg    Error message
+     * @param string $portal 'staff' or 'citizen'
+     * @param string $page   'login' or 'register'
      */
-    private function redirectWithError(string $page, string $msg, string $type = 'citizen'): void {
-    $path = $type === 'portal' ? '/irms/portal/' : '/irms/citizen/';
-    header('Location: ' . $path . $page . '.php?error=' . urlencode($msg));
-    exit;
-}
+    private function redirectWithError(
+        string $msg,
+        string $portal = 'citizen',
+        string $page   = 'login'
+    ): void {
+        if ($portal === 'staff') {
+            $path = '/irms/portal/login.php';
+        } else {
+            $path = '/irms/citizen/' . $page . '.php';
+        }
+        header('Location: ' . $path . '?error=' . urlencode($msg));
+        exit;
+    }
 }
 
-// Route based on action
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+// ── ROUTE ──────────────────────────────────────────────
+$action     = $_GET['action'] ?? $_POST['action'] ?? '';
 $controller = new AuthController();
 
 match($action) {

@@ -14,7 +14,7 @@ if (!empty($_GET['severity']))    $filters['severity']    = $_GET['severity'];
 
 $incidents   = $model->getAll($filters);
 $categories  = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll();
-$responders  = $pdo->query("SELECT id, name FROM users WHERE role = 'responder' AND is_active = 1")->fetchAll();
+$responders = $pdo->query("SELECT id, name FROM users WHERE role = 'responder' ORDER BY name ASC")->fetchAll();
 
 $statusColor = [
     'pending'     => 'warning',

@@ -25,43 +25,82 @@ if (!$title || !$cat || !$severity || !$desc || !$location) {
            urlencode('Punan ang lahat ng required fields.'));
     exit;
 }
-
 if (!$lat || !$lng) {
     header('Location: /irms/public/report.php?error=' .
            urlencode('I-pin muna ang lokasyon sa mapa.'));
     exit;
 }
-
 if ($anonEmail && !filter_var($anonEmail, FILTER_VALIDATE_EMAIL)) {
     header('Location: /irms/public/report.php?error=' .
            urlencode('Hindi valid ang email address.'));
     exit;
 }
 
-// ── QC BOUNDS VALIDATION (server-side) ────────────────
+// QC bounds validation
 $lat = floatval($lat);
 $lng = floatval($lng);
-
-if ($lat < 14.4764 || $lat > 14.7800 ||
-    $lng < 120.9980 || $lng > 121.1764) {
+if ($lat < 14.4764 || $lat > 14.7800 || $lng < 120.9980 || $lng > 121.1764) {
     header('Location: /irms/public/report.php?error=' .
-           urlencode('Hindi pwedeng mag-submit — ang lokasyon ay nasa labas ng Quezon City. ' .
-                     'Ang QC-ALERTO ay para lamang sa mga insidente sa loob ng QC.'));
+           urlencode('Hindi pwedeng mag-submit — ang lokasyon ay nasa labas ng Quezon City.'));
     exit;
 }
-// ── END QC VALIDATION ──────────────────────────────────
 
-// Generate unique tracking number — format: IRMS-YYYYMMDD-XXXXX
+// ── DUPLICATE DETECTION ────────────────────────────────
+$dupStmt = $pdo->prepare("
+    SELECT
+        id, title, tracking_number, status, location, created_at,
+        (
+            6371000 * ACOS(
+                COS(RADIANS(:lat1)) * COS(RADIANS(latitude)) *
+                COS(RADIANS(longitude) - RADIANS(:lng1)) +
+                SIN(RADIANS(:lat2)) * SIN(RADIANS(latitude))
+            )
+        ) AS distance_meters
+    FROM incidents
+    WHERE
+        category_id = :cat
+        AND status  NOT IN ('closed', 'rejected')
+        AND is_duplicate = 0
+        AND created_at  >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+        AND latitude  IS NOT NULL
+        AND longitude IS NOT NULL
+    HAVING distance_meters <= 50
+    ORDER BY distance_meters ASC, created_at DESC
+    LIMIT 1
+");
+$dupStmt->execute([
+    ':lat1' => $lat, ':lng1' => $lng,
+    ':lat2' => $lat, ':cat'  => $cat
+]);
+$duplicate = $dupStmt->fetch(PDO::FETCH_ASSOC);
+
+// Check if user clicked "Ituloy pa rin"
+$forceProceed = ($_POST['force_proceed'] ?? '') === '1';
+
+if ($duplicate && !$forceProceed) {
+    header('Location: /irms/public/report.php?duplicate=1' .
+           '&dup_id='       . urlencode($duplicate['id']) .
+           '&dup_tracking=' . urlencode($duplicate['tracking_number']) .
+           '&dup_title='    . urlencode($duplicate['title']) .
+           '&dup_status='   . urlencode($duplicate['status']) .
+           '&dup_location=' . urlencode($duplicate['location']));
+    exit;
+}
+
+// Generate tracking number
 $tracking = 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
-// Insert incident
+$isDuplicate = ($duplicate && $forceProceed) ? 1 : 0;
+$duplicateOf = ($duplicate && $forceProceed) ? $duplicate['id'] : null;
+
+// Insert
 $stmt = $pdo->prepare("
     INSERT INTO incidents
         (category_id, title, description, location,
          latitude, longitude, severity, status,
          is_anonymous, anon_name, anon_email, anon_phone,
-         tracking_number)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 1, ?, ?, ?, ?)
+         tracking_number, is_duplicate, duplicate_of)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 1, ?, ?, ?, ?, ?, ?)
 ");
 $stmt->execute([
     $cat, $title, $desc, $location,
@@ -69,7 +108,9 @@ $stmt->execute([
     $anonName  ?: null,
     $anonEmail ?: null,
     $anonPhone ?: null,
-    $tracking
+    $tracking,
+    $isDuplicate,
+    $duplicateOf
 ]);
 $incidentId = $pdo->lastInsertId();
 
@@ -77,13 +118,17 @@ $incidentId = $pdo->lastInsertId();
 $model = new Incident();
 $model->processNewIncident($incidentId, $cat, $severity);
 
-// Initial status log (user_id = NULL kasi anonymous)
+// Status log
+$remarks = 'Anonymous incident report submitted.';
+if ($isDuplicate) {
+    $remarks .= ' Flagged as possible duplicate of Incident #' . $duplicateOf . '.';
+}
 $pdo->prepare("
     INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
-    VALUES (?, NULL, NULL, 'pending', 'Anonymous incident report submitted.')
-")->execute([$incidentId]);
+    VALUES (?, NULL, NULL, 'pending', ?)
+")->execute([$incidentId, $remarks]);
 
-// Handle photo uploads
+// Photo uploads
 if (!empty($_FILES['photos']['name'][0])) {
     $uploadDir = __DIR__ . '/../uploads/';
     $allowed   = ['jpg','jpeg','png','gif','webp'];
@@ -108,9 +153,9 @@ if (!empty($_FILES['photos']['name'][0])) {
 
 // Audit log
 logAudit($pdo, null, 'anonymous_report_submitted', 'incident', $incidentId,
-    "Anonymous report submitted. Tracking: {$tracking}");
+    "Anonymous report submitted. Tracking: {$tracking}" .
+    ($isDuplicate ? " | Possible duplicate of #{$duplicateOf}" : ""));
 
-// Redirect sa success page
 header('Location: /irms/public/report_success.php?tracking=' .
        urlencode($tracking) . '&id=' . $incidentId);
 exit;
