@@ -41,6 +41,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
            class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>">
             <i class="bi bi-file-earmark-bar-graph me-2"></i> Reports
         </a>
+        <!-- ── DAGDAG: Audit Logs ── -->
+        <a href="/irms/portal/admin/audit_logs.php"
+           class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>">
+            <i class="bi bi-journal-text me-2"></i> Audit Logs
+        </a>
     </nav>
     <div class="mt-auto px-3">
         <div class="text-secondary small px-2 mb-2">

@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../models/User.php';
 
 class AuthController {
@@ -17,11 +19,8 @@ class AuthController {
         $password = $_POST['password']      ?? '';
 
         // ── PORTAL DETECTION ──────────────────────────────
-        // Priority: POST > GET > HTTP_REFERER auto-detect
         $portal = $_POST['portal'] ?? $_GET['portal'] ?? '';
 
-        // Auto-detect kung wala sa POST/GET
-        // Pag galing sa /portal/ URL, staff yan
         if (empty($portal)) {
             $referer = $_SERVER['HTTP_REFERER'] ?? '';
             if (strpos($referer, '/irms/portal/') !== false) {
@@ -43,8 +42,6 @@ class AuthController {
         }
 
         // ── PORTAL VALIDATION ─────────────────────────────
-
-        // Staff portal → citizen role = BLOCK
         if ($portal === 'staff' && $user['role'] === 'citizen') {
             $this->redirectWithError(
                 'Walang access sa Staff Portal. Gamitin ang Citizen login.',
@@ -53,7 +50,6 @@ class AuthController {
             return;
         }
 
-        // Citizen portal → staff role = redirect sa staff portal
         if ($portal !== 'staff' && in_array($user['role'], ['admin', 'responder'])) {
             header('Location: /irms/portal/login.php?error=' .
                    urlencode('Para sa mga staff, mag-login dito sa Staff Portal.'));
@@ -65,7 +61,18 @@ class AuthController {
         $_SESSION['name']    = $user['name'];
         $_SESSION['role']    = $user['role'];
 
-        // ── REDIRECT BASED ON ROLE ────────────────────────
+        // ── AUDIT LOG — login ─────────────────────────────
+        global $pdo;
+        logAudit(
+            $pdo,
+            $user['id'],
+            'user_login',
+            'user',
+            $user['id'],
+            $user['name'] . ' nag-login via ' . ($portal ?: 'citizen') . ' portal'
+        );
+
+        // ── REDIRECT ──────────────────────────────────────
         redirectByRole();
     }
 
@@ -117,18 +124,24 @@ class AuthController {
     }
 
     public function logout(): void {
+        // ── AUDIT LOG — logout ────────────────────────────
+        if (isLoggedIn()) {
+            global $pdo;
+            logAudit(
+                $pdo,
+                $_SESSION['user_id'] ?? null,
+                'user_logout',
+                'user',
+                $_SESSION['user_id'] ?? null,
+                ($_SESSION['name'] ?? 'Unknown') . ' nag-logout'
+            );
+        }
+
         session_destroy();
         header('Location: /irms/index.php');
         exit;
     }
 
-    /**
-     * Redirect with error — alam na kung staff o citizen ang portal
-     *
-     * @param string $msg    Error message
-     * @param string $portal 'staff' or 'citizen'
-     * @param string $page   'login' or 'register'
-     */
     private function redirectWithError(
         string $msg,
         string $portal = 'citizen',

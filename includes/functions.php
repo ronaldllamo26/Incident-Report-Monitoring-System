@@ -48,32 +48,41 @@ function redirectWith(string $url, string $type, string $msg): void {
 
 /**
  * Log an action sa audit_logs table
+ * FIXED: Proper nullable type hints para walang PHP warnings
  */
 function logAudit(
-    PDO    $pdo,
-    ?int   $userId,
-    string $action,
-    string $targetType = null,
-    int    $targetId   = null,
-    string $details    = null
+    PDO     $pdo,
+    ?int    $userId,
+    string  $action,
+    ?string $targetType = null,  // fixed: ?string
+    ?int    $targetId   = null,  // fixed: ?int
+    ?string $details    = null   // fixed: ?string
 ): void {
     try {
+        // Support para sa proxied connections (e.g. ngrok, deployment)
         $ip = $_SERVER['HTTP_X_FORWARDED_FOR']
             ?? $_SERVER['REMOTE_ADDR']
             ?? null;
+
+        // Kung may multiple IPs sa X-Forwarded-For, kuha lang ang una
+        if ($ip && str_contains($ip, ',')) {
+            $ip = trim(explode(',', $ip)[0]);
+        }
 
         $pdo->prepare("
             INSERT INTO audit_logs
                 (user_id, action, target_type, target_id, details, ip_address)
             VALUES (?, ?, ?, ?, ?, ?)
         ")->execute([$userId, $action, $targetType, $targetId, $details, $ip]);
+
     } catch (Exception $e) {
         // Hindi papigilan ang system kahit mag-fail ang audit log
+        // Silent fail lang — para hindi ma-interrupt ang main flow
     }
 }
 
 /**
- * Generate tracking number
+ * Generate tracking number — format: IRMS-YYYYMMDD-XXXXX
  */
 function generateTracking(): string {
     return 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
