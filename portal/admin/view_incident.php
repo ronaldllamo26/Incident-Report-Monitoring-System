@@ -17,9 +17,10 @@ if (!$incident) {
 $attachments = $model->getAttachments($id);
 $logs        = $model->getStatusLogs($id);
 $responses   = $model->getResponses($id);
-$responders  = $pdo->query("
+$responders = $pdo->query("
     SELECT id, name FROM users
-    WHERE role = 'responder' AND is_active = 1
+    WHERE role = 'responder'
+    ORDER BY name
 ")->fetchAll();
 
 $statusColor = [
@@ -84,9 +85,12 @@ $error   = $_GET['error']   ?? '';
                     <h6 class="fw-semibold mb-0">Incident #<?= $id ?></h6>
                 </div>
             </div>
-            <span class="badge bg-<?= $statusColor[$incident['status']] ?>">
-                <?= ucwords(str_replace('_',' ',$incident['status'])) ?>
-            </span>
+             <div class="d-flex align-items-center gap-2">
+                <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+                <span class="badge bg-<?= $statusColor[$incident['status']] ?>">
+                    <?= ucwords(str_replace('_',' ',$incident['status'])) ?>
+                </span>
+            </div>
         </div>
 
         <div class="p-4">

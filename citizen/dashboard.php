@@ -135,7 +135,8 @@ foreach ($reports as $r) {
                 Citizen
             </span>
         </div>
-        <div class="d-flex align-items-center gap-3">
+         <div class="d-flex align-items-center gap-3">
+            <?php include __DIR__ . '/../includes/notification_bell.php'; ?>
             <span style="font-size:13px;color:var(--muted);">
                 <i class="bi bi-person-circle me-1"></i>
                 <?= htmlspecialchars($user['name']) ?>

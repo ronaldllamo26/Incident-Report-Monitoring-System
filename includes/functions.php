@@ -87,3 +87,14 @@ function logAudit(
 function generateTracking(): string {
     return 'IRMS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 }
+
+function createNotification(PDO $pdo, int $userId, string $title, string $message, ?int $incidentId = null): void {
+    try {
+        $pdo->prepare("
+            INSERT INTO notifications (user_id, incident_id, title, message)
+            VALUES (?, ?, ?, ?)
+        ")->execute([$userId, $incidentId, $title, $message]);
+    } catch (Exception $e) {
+        // Silent fail
+    }
+}

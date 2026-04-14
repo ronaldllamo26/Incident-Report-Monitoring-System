@@ -117,3 +117,25 @@ if ($action === 'respond') {
 // Fallback
 header('Location: ' . $back);
 exit;
+
+// Notify citizen pag may status update
+if ($fullIncident['reporter_id']) {
+    createNotification(
+        $pdo,
+        $fullIncident['reporter_id'],
+        'Status Update — ' . ucwords(str_replace('_', ' ', $newStatus)),
+        'Ang iyong report na "' . $fullIncident['title'] . '" ay na-update na.',
+        $id
+    );
+}
+
+// Notify admin pag may bagong assignment
+if ($responderId) {
+    createNotification(
+        $pdo,
+        $responderId,
+        'Bagong Assigned Incident',
+        'Na-assign sa iyo ang incident: "' . $incident['title'] . '".',
+        $incidentId
+    );
+}

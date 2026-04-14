@@ -66,9 +66,12 @@ $error   = $_GET['error']   ?? '';
             <i class="bi bi-shield-check me-1"></i> IRMS
             <span class="badge bg-light text-success ms-2" style="font-size:11px;">Responder</span>
         </a>
-        <a href="/irms/portal/responder/dashboard.php" class="btn btn-outline-light btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Back
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+            <a href="/irms/portal/responder/dashboard.php" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-arrow-left me-1"></i> Back
+            </a>
+        </div>
     </div>
 </nav>
 

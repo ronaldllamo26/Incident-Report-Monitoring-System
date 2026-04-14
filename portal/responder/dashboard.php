@@ -46,7 +46,8 @@ $sevColor = [
             <i class="bi bi-shield-check me-1"></i> IRMS
             <span class="badge bg-light text-success ms-2" style="font-size:11px;">Responder</span>
         </a>
-        <div class="d-flex align-items-center gap-3">
+         <div class="d-flex align-items-center gap-3">
+            <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
             <span class="text-white small">
                 <i class="bi bi-person-circle me-1"></i>
                 <?= htmlspecialchars($user['name']) ?>
