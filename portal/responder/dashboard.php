@@ -1,6 +1,5 @@
 <?php
-
-require_once __DIR__ . '/../../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../../includes/auth.php';
 requireRole('responder');
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../models/Incident.php';
@@ -8,198 +7,343 @@ require_once __DIR__ . '/../../models/Incident.php';
 $user  = currentUser();
 $model = new Incident();
 
-// Incidents assigned sa responder na to
 $incidents = $model->getAll(['assigned_to' => $user['id']]);
 
-$counts = ['pending' => 0, 'in_progress' => 0, 'resolved' => 0, 'closed' => 0];
-foreach ($incidents as $i) {
-    if (isset($counts[$i['status']])) $counts[$i['status']]++;
+$counts = ['all' => count($incidents), 'pending' => 0, 'in_progress' => 0, 'resolved' => 0, 'closed' => 0];
+foreach ($incidents as $inc) {
+    if (isset($counts[$inc['status']])) $counts[$inc['status']]++;
 }
 
-$statusColor = [
-    'pending'     => 'warning',
-    'in_progress' => 'primary',
-    'resolved'    => 'success',
-    'closed'      => 'secondary',
+$stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'closed' => 'Closed'];
+$stStyle = [
+    'pending'     => 'background:#fef3c7;color:#92400e;',
+    'in_progress' => 'background:#dbeafe;color:#1e40af;',
+    'resolved'    => 'background:#dcfce7;color:#166534;',
+    'closed'      => 'background:#f3f4f6;color:#4b5563;',
 ];
-$sevColor = [
-    'low'      => 'success',
-    'medium'   => 'warning',
-    'high'     => 'danger',
-    'critical' => 'dark',
-];
+$sevColor = ['low' => '#16a34a', 'medium' => '#d97706', 'high' => '#ea580c', 'critical' => '#CE1126'];
+$sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'critical' => '#fef2f2'];
 ?>
 <!DOCTYPE html>
 <html lang="fil">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Responder Dashboard — IRMS</title>
+    <title>Responder Dashboard — QC-ALERTO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-</head>
-<body class="bg-light">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --qc-blue:  #1e293b;
+            --qc-navy:  #133C52;
+            --qc-red:   #CE1126;
+            --bg:       #f4f6f9;
+            --border:   #e2e8f0;
+            --text:     #1e293b;
+            --muted:    #64748b;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
 
-<nav class="navbar navbar-dark bg-success">
-    <div class="container">
-        <a class="navbar-brand fw-semibold">
-            <i class="bi bi-shield-check me-1"></i> IRMS
-            <span class="badge bg-light text-success ms-2" style="font-size:11px;">Responder</span>
+        /* ── Topbar ─────────────────────────────────────────── */
+        .topbar {
+            background: var(--qc-blue);
+            border-bottom: 3px solid var(--qc-red);
+            position: sticky; top: 0; z-index: 100;
+        }
+        .topbar-inner {
+            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            display: flex; align-items: center; justify-content: space-between; height: 56px;
+        }
+        .brand { font-size: 16px; font-weight: 700; color: #fff; text-decoration: none;
+                 display: flex; align-items: center; gap: 10px; letter-spacing: 0.2px; }
+        .brand img { height: 30px; width: 30px; object-fit: contain; }
+        .role-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+                      color: #fff; font-size: 10px; font-weight: 600; padding: 2px 8px;
+                      border-radius: 4px; letter-spacing: 0.8px; text-transform: uppercase; }
+        .topbar-right { display: flex; align-items: center; gap: 16px; }
+        .user-label { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500;
+                      display: flex; align-items: center; gap: 6px; }
+        .logout-link { font-size: 12px; color: rgba(255,255,255,0.7); text-decoration: none;
+                       display: flex; align-items: center; gap: 5px; padding: 5px 10px;
+                       border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; transition: all 0.2s; }
+        .logout-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+        /* ── Page Header ────────────────────────────────────── */
+        .page-header {
+            background: #fff; border-bottom: 1px solid var(--border);
+            padding: 20px 0;
+        }
+        .page-header-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .page-header h4 { font-size: 18px; font-weight: 700; color: var(--text); margin: 0 0 2px; }
+        .page-header p { font-size: 13px; color: var(--muted); margin: 0; }
+
+        .main-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+        /* ── Stat Cards ─────────────────────────────────────── */
+        .stat-card {
+            background: #fff; border: 1px solid var(--border); border-radius: 10px;
+            padding: 18px 20px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+            display: flex; align-items: center; gap: 14px;
+        }
+        .stat-card:hover { border-color: var(--qc-blue); box-shadow: 0 0 0 3px rgba(0,56,168,0.08); }
+        .stat-card.active { border-color: var(--qc-blue); box-shadow: 0 0 0 3px rgba(30,41,59,0.12);
+                            background: #f0f4ff; }
+        .stat-icon { width: 42px; height: 42px; border-radius: 8px; display: flex;
+                     align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .stat-num { font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); }
+        .stat-lbl { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+        /* ── Incidents Table Card ───────────────────────────── */
+        .table-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+        .table-card-header { padding: 14px 20px; border-bottom: 1px solid var(--border);
+                             display: flex; align-items: center; justify-content: space-between;
+                             flex-wrap: wrap; gap: 12px; background: #fafbfc; }
+        .section-title { font-size: 14px; font-weight: 600; color: var(--text); }
+
+        /* Filter tabs */
+        .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+        .ftab { padding: 5px 13px; border-radius: 6px; font-size: 12px; font-weight: 500;
+                border: 1px solid var(--border); background: #fff; color: var(--muted);
+                cursor: pointer; transition: all 0.15s; }
+        .ftab:hover { border-color: var(--qc-blue); color: var(--qc-blue); }
+        .ftab.active { background: var(--qc-blue); border-color: var(--qc-blue);
+                       color: #fff; font-weight: 600; }
+
+        /* Search */
+        .search-box { position: relative; }
+        .search-box input { padding: 7px 12px 7px 32px; border: 1px solid var(--border);
+                            border-radius: 6px; font-size: 13px; outline: none; background: #fff;
+                            transition: border-color 0.2s; width: 200px; }
+        .search-box input:focus { border-color: var(--qc-blue); }
+        .search-box .si { position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+                          color: var(--muted); font-size: 13px; }
+
+        /* Table */
+        .table { margin: 0; }
+        .table th { font-size: 11px; font-weight: 600; color: var(--muted);
+                    text-transform: uppercase; letter-spacing: 0.4px; padding: 10px 16px;
+                    background: #fafbfc; border-bottom: 1px solid var(--border); }
+        .table td { font-size: 13px; padding: 13px 16px; vertical-align: middle;
+                    border-color: #f1f5f9; color: var(--text); }
+        .table tbody tr { transition: background 0.1s; }
+        .table tbody tr:hover { background: #f8fafc; }
+
+        .sev-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+        .badge-status { padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+        .badge-sev    { padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+        .tracking-num { font-family: monospace; font-size: 11px; background: #f1f5f9;
+                        color: #475569; padding: 2px 7px; border-radius: 4px; }
+        .btn-view { padding: 5px 14px; background: var(--qc-blue); color: #fff; border-radius: 6px;
+                    font-size: 12px; font-weight: 600; text-decoration: none; transition: opacity 0.2s; }
+        .btn-view:hover { opacity: 0.85; color: #fff; }
+
+        /* Empty state */
+        .empty-state { text-align: center; padding: 60px 20px; }
+        #no-results { display: none; }
+    </style>
+</head>
+<body>
+
+<!-- Topbar -->
+<nav class="topbar">
+    <div class="topbar-inner">
+        <a href="/irms/portal/responder/dashboard.php" class="brand">
+            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC">
+            QC-ALERTO
+            <span class="role-badge">Responder</span>
         </a>
-         <div class="d-flex align-items-center gap-3">
+        <div class="topbar-right">
             <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
-            <span class="text-white small">
-                <i class="bi bi-person-circle me-1"></i>
+            <span class="user-label">
+                <i class="bi bi-person-circle"></i>
                 <?= htmlspecialchars($user['name']) ?>
             </span>
-            <a href="/irms/controllers/AuthController.php?action=logout"
-               class="btn btn-outline-light btn-sm">
-                <i class="bi bi-box-arrow-right me-1"></i> Logout
+            <a href="/irms/controllers/AuthController.php?action=logout" class="logout-link">
+                <i class="bi bi-box-arrow-right"></i> Logout
             </a>
         </div>
     </div>
 </nav>
 
-<div class="container py-4">
-
-    <div class="mb-4">
-        <h5 class="fw-semibold mb-0">Assigned Incidents</h5>
-        <p class="text-muted small">Lahat ng incidents na naka-assign sa iyo.</p>
-    </div>
-
-    <!-- Summary cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm text-center py-3">
-                <div class="fs-3 fw-bold text-warning"><?= $counts['pending'] ?></div>
-                <div class="small text-muted">Pending</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm text-center py-3">
-                <div class="fs-3 fw-bold text-primary"><?= $counts['in_progress'] ?></div>
-                <div class="small text-muted">In Progress</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm text-center py-3">
-                <div class="fs-3 fw-bold text-success"><?= $counts['resolved'] ?></div>
-                <div class="small text-muted">Resolved</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm text-center py-3">
-                <div class="fs-3 fw-bold text-secondary"><?= $counts['closed'] ?></div>
-                <div class="small text-muted">Closed</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter tabs -->
-    <div class="d-flex gap-2 mb-3 flex-wrap">
-        <button class="btn btn-sm btn-primary filter-btn active" data-filter="all">
-            All <span class="badge bg-white text-primary ms-1"><?= count($incidents) ?></span>
-        </button>
-        <button class="btn btn-sm btn-outline-warning filter-btn" data-filter="pending">
-            Pending <span class="badge bg-warning text-dark ms-1"><?= $counts['pending'] ?></span>
-        </button>
-        <button class="btn btn-sm btn-outline-primary filter-btn" data-filter="in_progress">
-            In Progress <span class="badge bg-primary ms-1"><?= $counts['in_progress'] ?></span>
-        </button>
-        <button class="btn btn-sm btn-outline-success filter-btn" data-filter="resolved">
-            Resolved <span class="badge bg-success ms-1"><?= $counts['resolved'] ?></span>
-        </button>
-    </div>
-
-    <!-- Incidents list -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <?php if (empty($incidents)): ?>
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                    Wala kang assigned na incident ngayon.
-                </div>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="incidents-table">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-3 small">#</th>
-                                <th class="small">Incident</th>
-                                <th class="small">Category</th>
-                                <th class="small">Severity</th>
-                                <th class="small">Status</th>
-                                <th class="small">Reported</th>
-                                <th class="small">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($incidents as $i => $inc): ?>
-                            <tr data-status="<?= $inc['status'] ?>">
-                                <td class="ps-3 text-muted small"><?= $inc['id'] ?></td>
-                                <td>
-                                    <div class="small fw-medium">
-                                        <?= htmlspecialchars($inc['title']) ?>
-                                    </div>
-                                    <div class="text-muted" style="font-size:11px;">
-                                        <i class="bi bi-geo-alt"></i>
-                                        <?= htmlspecialchars(substr($inc['location'], 0, 40)) ?>...
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark border small">
-                                        <?= htmlspecialchars($inc['category_name']) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-<?= $sevColor[$inc['severity']] ?> small">
-                                        <?= ucfirst($inc['severity']) ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-<?= $statusColor[$inc['status']] ?> small">
-                                        <?= ucwords(str_replace('_', ' ', $inc['status'])) ?>
-                                    </span>
-                                </td>
-                                <td class="small text-muted">
-                                    <?= date('M d, Y', strtotime($inc['reported_at'])) ?>
-                                </td>
-                                <td>
-                                    <a href="/irms/portal/responder/view_incident.php?id=<?= $inc['id'] ?>"
-                                       class="btn btn-outline-success btn-sm">
-                                        <i class="bi bi-eye"></i> View
-                                    </a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-        </div>
+<!-- Page Header -->
+<div class="page-header">
+    <div class="page-header-inner">
+        <h4>Assigned Incidents</h4>
+        <p>Lahat ng incidents na naka-assign sa iyo bilang responder.</p>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-// Filter tabs
-document.querySelectorAll('.filter-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.filter-btn').forEach(b => {
-            b.classList.remove('active', 'btn-primary', 'btn-warning',
-                               'btn-success', 'btn-secondary');
-            b.classList.add('btn-outline-' + (b.dataset.filter === 'all' ? 'primary' :
-                            b.dataset.filter === 'pending' ? 'warning' :
-                            b.dataset.filter === 'in_progress' ? 'primary' : 'success'));
-        });
-        this.classList.add('active');
+<div class="main-wrap">
 
-        var filter = this.dataset.filter;
-        document.querySelectorAll('#incidents-table tbody tr').forEach(function(row) {
-            row.style.display = (filter === 'all' || row.dataset.status === filter) ? '' : 'none';
-        });
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="stat-card active" id="sc-all" onclick="setFilter('all',this)">
+                <div class="stat-icon" style="background:#f0f4ff;">
+                    <i class="bi bi-clipboard-list" style="color:var(--qc-blue);"></i>
+                </div>
+                <div>
+                    <div class="stat-num"><?= $counts['all'] ?></div>
+                    <div class="stat-lbl">Lahat</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card" id="sc-pending" onclick="setFilter('pending',this)">
+                <div class="stat-icon" style="background:#fffbeb;">
+                    <i class="bi bi-hourglass-split" style="color:#d97706;"></i>
+                </div>
+                <div>
+                    <div class="stat-num"><?= $counts['pending'] ?></div>
+                    <div class="stat-lbl">Pending</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card" id="sc-in_progress" onclick="setFilter('in_progress',this)">
+                <div class="stat-icon" style="background:#eff6ff;">
+                    <i class="bi bi-arrow-repeat" style="color:#1d4ed8;"></i>
+                </div>
+                <div>
+                    <div class="stat-num"><?= $counts['in_progress'] ?></div>
+                    <div class="stat-lbl">In Progress</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card" id="sc-resolved" onclick="setFilter('resolved',this)">
+                <div class="stat-icon" style="background:#f0fdf4;">
+                    <i class="bi bi-check-circle" style="color:#16a34a;"></i>
+                </div>
+                <div>
+                    <div class="stat-num"><?= $counts['resolved'] ?></div>
+                    <div class="stat-lbl">Resolved</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="section-title">
+                    <i class="bi bi-list-ul me-1" style="color:var(--qc-blue);"></i>
+                    Listahan ng Incidents
+                </span>
+                <div class="filter-tabs">
+                    <span class="ftab active" data-st="all" onclick="setTabFilter('all',this)">Lahat (<?= $counts['all'] ?>)</span>
+                    <span class="ftab" data-st="pending" onclick="setTabFilter('pending',this)">Pending (<?= $counts['pending'] ?>)</span>
+                    <span class="ftab" data-st="in_progress" onclick="setTabFilter('in_progress',this)">In Progress (<?= $counts['in_progress'] ?>)</span>
+                    <span class="ftab" data-st="resolved" onclick="setTabFilter('resolved',this)">Resolved (<?= $counts['resolved'] ?>)</span>
+                </div>
+            </div>
+            <div class="search-box">
+                <i class="bi bi-search si"></i>
+                <input type="text" id="search-inp" placeholder="Hanapin..." oninput="doSearch(this.value)">
+            </div>
+        </div>
+
+        <?php if (empty($incidents)): ?>
+            <div class="empty-state">
+                <i class="bi bi-inbox" style="font-size:40px;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
+                <p class="text-muted mb-0">Wala kang assigned na incident ngayon.</p>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-hover" id="inc-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">Sev.</th>
+                            <th>Incident</th>
+                            <th>Kategorya</th>
+                            <th>Status</th>
+                            <th>Petsa</th>
+                            <th style="width:80px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($incidents as $inc):
+                        $sc = $sevColor[$inc['severity']] ?? '#64748b';
+                        $ss = $stStyle[$inc['status']] ?? '';
+                    ?>
+                        <tr data-status="<?= $inc['status'] ?>"
+                            data-title="<?= strtolower(htmlspecialchars($inc['title'])) ?>">
+                            <td>
+                                <span class="sev-dot" style="background:<?= $sc ?>;"></span>
+                            </td>
+                            <td>
+                                <div style="font-weight:600;font-size:13px;margin-bottom:2px;">
+                                    <?= htmlspecialchars($inc['title']) ?>
+                                </div>
+                                <div style="font-size:11px;color:var(--muted);">
+                                    <i class="bi bi-geo-alt"></i>
+                                    <?= htmlspecialchars(mb_substr($inc['location'], 0, 50)) ?>
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-size:12px;background:#f1f5f9;color:#374151;
+                                             padding:3px 9px;border-radius:5px;font-weight:500;">
+                                    <?= htmlspecialchars($inc['category_name']) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge-status" style="<?= $ss ?>">
+                                    <?= $stLabel[$inc['status']] ?? ucfirst($inc['status']) ?>
+                                </span>
+                            </td>
+                            <td style="color:var(--muted);font-size:12px;">
+                                <?= date('M d, Y', strtotime($inc['reported_at'])) ?>
+                            </td>
+                            <td>
+                                <a href="/irms/portal/responder/view_incident.php?id=<?= $inc['id'] ?>"
+                                   class="btn-view">Tingnan</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div id="no-results" class="empty-state">
+                <i class="bi bi-search" style="font-size:36px;color:#cbd5e1;display:block;margin-bottom:10px;"></i>
+                <p class="text-muted mb-0">Walang nahanap na incident.</p>
+            </div>
+        <?php endif; ?>
+    </div>
+
+</div>
+
+<script>
+var curF = 'all';
+function setFilter(s, el) {
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.ftab').forEach(t => t.classList.toggle('active', t.dataset.st === s));
+    curF = s; apply();
+}
+function setTabFilter(s, el) {
+    document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+    var sc = document.getElementById('sc-' + s);
+    if (sc) sc.classList.add('active');
+    curF = s; apply();
+}
+function doSearch(q) { apply(q.toLowerCase().trim()); }
+function apply(q) {
+    if (q === undefined) q = document.getElementById('search-inp').value.toLowerCase().trim();
+    var rows = document.querySelectorAll('#inc-table tbody tr');
+    var vis = 0;
+    rows.forEach(function(r) {
+        var ok = (curF === 'all' || r.dataset.status === curF) && (!q || r.dataset.title.includes(q));
+        r.style.display = ok ? '' : 'none';
+        if (ok) vis++;
     });
-});
+    var nr = document.getElementById('no-results');
+    if (nr) nr.style.display = (vis === 0 && rows.length > 0) ? 'block' : 'none';
+}
 </script>
 </body>
 </html>

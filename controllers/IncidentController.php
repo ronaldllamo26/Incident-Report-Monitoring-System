@@ -3,11 +3,13 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../config/mailer.php';
+require_once __DIR__ . '/../includes/functions.php';
 requireRole('citizen');
 
 $action = $_GET['action'] ?? '';
 
 if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
 
     $user     = currentUser();
     $title    = trim($_POST['title']        ?? '');
@@ -24,6 +26,25 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                urlencode('Punan ang lahat ng required fields.'));
         exit;
     }
+
+    // ── INPUT LENGTH LIMITS ───────────────────────────────────
+    // Server-side guard — HTML maxlength can be bypassed by curl/Postman
+    if (mb_strlen($title) > 150) {
+        header('Location: /irms/citizen/report.php?error=' .
+               urlencode('Ang pamagat ay hindi dapat hihigit sa 150 characters.'));
+        exit;
+    }
+    if (mb_strlen($desc) > 3000) {
+        header('Location: /irms/citizen/report.php?error=' .
+               urlencode('Ang deskripsyon ay hindi dapat hihigit sa 3000 characters.'));
+        exit;
+    }
+    if (mb_strlen($location) > 255) {
+        header('Location: /irms/citizen/report.php?error=' .
+               urlencode('Ang lokasyon ay hindi dapat hihigit sa 255 characters.'));
+        exit;
+    }
+    // ─────────────────────────────────────────────────────────
     if (!$lat || !$lng) {
         header('Location: /irms/citizen/report.php?error=' .
                urlencode('I-pin muna ang lokasyon sa mapa.'));
@@ -108,15 +129,21 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $model = new Incident();
     $model->processNewIncident($incidentId, $cat, $severity);
 
-    // Photo uploads
+    // Photo uploads (with strict MIME type + magic byte validation)
     if (!empty($_FILES['photos']['name'][0])) {
         $uploadDir = __DIR__ . '/../uploads/';
-        $allowed   = ['jpg','jpeg','png','gif','webp'];
         foreach ($_FILES['photos']['tmp_name'] as $i => $tmp) {
             if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) continue;
-            $ext = strtolower(pathinfo($_FILES['photos']['name'][$i], PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowed)) continue;
-            $filename = uniqid('inc_', true) . '.' . $ext;
+
+            $check = validateUploadedImage($tmp, $_FILES['photos']['name'][$i]);
+            if (!$check['valid']) {
+                // Skip invalid file silently — or log it
+                logAudit($pdo, $user['id'], 'upload_rejected', 'incident', $incidentId,
+                    'File rejected: ' . $_FILES['photos']['name'][$i] . ' — ' . $check['error']);
+                continue;
+            }
+
+            $filename = uniqid('inc_', true) . '.' . $check['ext'];
             if (move_uploaded_file($tmp, $uploadDir . $filename)) {
                 $pdo->prepare("
                     INSERT INTO attachments (incident_id, file_name, file_path, file_type)
@@ -125,7 +152,7 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $incidentId,
                     $_FILES['photos']['name'][$i],
                     'uploads/' . $filename,
-                    $_FILES['photos']['type'][$i],
+                    $check['mime'], // Server-detected MIME, NOT client-supplied
                 ]);
             }
         }
@@ -141,27 +168,69 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         VALUES (?, ?, NULL, 'pending', ?)
     ")->execute([$incidentId, $user['id'], $remarks]);
 
-    // Email
+    // ── IN-APP NOTIFICATIONS (run FIRST — before email which may fail) ──
     $fullIncident = $model->getById($incidentId);
-    if ($fullIncident && !empty($fullIncident['reporter_email'])) {
-        sendMail(
-            $fullIncident['reporter_email'],
-            'Report Confirmation — IRMS #' . $incidentId,
-            mailReportConfirmation($fullIncident, $tracking)
+
+    // Notify all admins about the new report
+    $adminStmt = $pdo->prepare("SELECT id FROM users WHERE role = 'admin' AND is_active = 1");
+    $adminStmt->execute();
+    $admins = $adminStmt->fetchAll();
+    foreach ($admins as $admin) {
+        createNotification(
+            $pdo,
+            (int)$admin['id'],
+            'Bagong Incident Report',
+            'May bagong report: "' . $title . '" mula kay ' . $user['name'] . '.',
+            $incidentId
         );
     }
-    if ($fullIncident && $fullIncident['assigned_to']) {
-        $respStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
-        $respStmt->execute([$fullIncident['assigned_to']]);
-        $responder = $respStmt->fetch();
-        if ($responder) {
+
+    // Notify auto-assigned responder
+    if ($fullIncident && !empty($fullIncident['assigned_to'])) {
+        createNotification(
+            $pdo,
+            (int)$fullIncident['assigned_to'],
+            'Bagong Assigned Incident',
+            'Na-assign sa iyo ang incident: "' . $title . '".',
+            $incidentId
+        );
+    }
+
+    // Notify citizen — confirmation
+    createNotification(
+        $pdo,
+        (int)$user['id'],
+        'Report Submitted',
+        'Ang report mo na "' . $title . '" ay na-submit na. Tracking: ' . $tracking,
+        $incidentId
+    );
+    // ──────────────────────────────────────────────────────
+
+    // ── EMAIL NOTIFICATIONS (wrapped in try-catch) ───────
+    try {
+        if ($fullIncident && !empty($fullIncident['reporter_email'])) {
             sendMail(
-                $responder['email'],
-                '🚨 Bagong Assigned Incident #' . $incidentId . ' — ' . $fullIncident['title'],
-                mailResponderAssigned($fullIncident, $responder)
+                $fullIncident['reporter_email'],
+                'Report Confirmation — IRMS #' . $incidentId,
+                mailReportConfirmation($fullIncident, $tracking)
             );
         }
+        if ($fullIncident && $fullIncident['assigned_to']) {
+            $respStmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+            $respStmt->execute([$fullIncident['assigned_to']]);
+            $responder = $respStmt->fetch();
+            if ($responder) {
+                sendMail(
+                    $responder['email'],
+                    '🚨 Bagong Assigned Incident #' . $incidentId . ' — ' . $fullIncident['title'],
+                    mailResponderAssigned($fullIncident, $responder)
+                );
+            }
+        }
+    } catch (Exception $e) {
+        // Email failed — okay lang, in-app notification na-send na
     }
+    // ──────────────────────────────────────────────────────
 
     header('Location: /irms/public/report_success.php?tracking=' .
            urlencode($tracking) . '&id=' . $incidentId);

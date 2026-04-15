@@ -1,0 +1,18 @@
+# ── SECURITY: Uploads Directory ─────────────────────────────
+# Prevent execution of any server-side scripts in this directory.
+# Even if a malicious file bypasses upload validation, it cannot run here.
+
+# Block PHP and other executable scripts
+<FilesMatch "\.(?i:php\d?|phtml|phar|phtml|pl|py|jsp|asp|aspx|cgi|sh|bat|cmd)$">
+    Require all denied
+</FilesMatch>
+
+# Force all files to be served as binary/octet-stream (optional extra layer)
+# This prevents MIME-sniffing attacks on some browsers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Disposition "attachment"
+</IfModule>
+
+# Disable directory listing
+Options -Indexes

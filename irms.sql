@@ -91,6 +91,21 @@ CREATE TABLE responses (
 );
 
 -- --------------------------------------------------------
+-- Table: notifications (in-app notification bell)
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notifications (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT NOT NULL,
+    incident_id INT DEFAULT NULL,
+    title       VARCHAR(200) NOT NULL,
+    message     TEXT NOT NULL,
+    is_read     TINYINT(1) DEFAULT 0,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE SET NULL
+);
+
+-- --------------------------------------------------------
 -- Default data: categories
 -- --------------------------------------------------------
 INSERT INTO categories (name, description, icon) VALUES

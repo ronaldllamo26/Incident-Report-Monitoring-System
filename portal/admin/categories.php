@@ -8,6 +8,7 @@ $success = $_GET['success'] ?? '';
 $error   = $_GET['error']   ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
     $action = $_POST['action'] ?? '';
     if ($action === 'add') {
         $name=$_POST['name']??''; $name=trim($name);
@@ -112,6 +113,7 @@ $responders=$pdo->query("SELECT id,name FROM users WHERE role='responder' ORDER 
                                     <td class="d-flex gap-1">
                                         <button class="btn btn-outline-primary btn-sm" onclick="editCat(<?= $cat['id'] ?>,'<?= addslashes($cat['name']) ?>','<?= addslashes($cat['description']??'') ?>','<?= $cat['default_responder_id']??'' ?>',<?= $cat['sla_critical'] ?>,<?= $cat['sla_high'] ?>,<?= $cat['sla_medium'] ?>,<?= $cat['sla_low'] ?>)"><i class="bi bi-pencil"></i></button>
                                         <form action="" method="POST" class="d-inline">
+                        <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= $cat['id'] ?>">
                                             <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('I-delete ang category na ito?')"><i class="bi bi-trash"></i></button>
@@ -131,7 +133,7 @@ $responders=$pdo->query("SELECT id,name FROM users WHERE role='responder' ORDER 
 <!-- ADD MODAL -->
 <div class="modal fade" id="addCatModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header"><h6 class="modal-title fw-semibold">Add Category</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <form action="" method="POST"><input type="hidden" name="action" value="add">
+    <form action="" method="POST"><?= csrf_field() ?><input type="hidden" name="action" value="add">
     <div class="modal-body"><div class="row g-3">
         <div class="col-md-6"><label class="form-label small fw-medium">Category Name <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" required placeholder="e.g. Fire Incident"></div>
         <div class="col-md-6"><label class="form-label small fw-medium">Default Responder</label><select name="default_responder_id" class="form-select"><option value="">-- Walang default --</option><?php foreach($responders as $r): ?><option value="<?= $r['id'] ?>"><?= htmlspecialchars($r['name']) ?></option><?php endforeach; ?></select></div>
@@ -151,7 +153,7 @@ $responders=$pdo->query("SELECT id,name FROM users WHERE role='responder' ORDER 
 <!-- EDIT MODAL -->
 <div class="modal fade" id="editCatModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header"><h6 class="modal-title fw-semibold">Edit Category</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <form action="" method="POST"><input type="hidden" name="action" value="edit"><input type="hidden" name="id" id="edit-cat-id">
+    <form action="" method="POST"><?= csrf_field() ?><input type="hidden" name="action" value="edit"><input type="hidden" name="id" id="edit-cat-id">
     <div class="modal-body"><div class="row g-3">
         <div class="col-md-6"><label class="form-label small fw-medium">Category Name <span class="text-danger">*</span></label><input type="text" name="name" id="edit-cat-name" class="form-control" required></div>
         <div class="col-md-6"><label class="form-label small fw-medium">Default Responder</label><select name="default_responder_id" id="edit-cat-responder" class="form-select"><option value="">-- Walang default --</option><?php foreach($responders as $r): ?><option value="<?= $r['id'] ?>"><?= htmlspecialchars($r['name']) ?></option><?php endforeach; ?></select></div>

@@ -15,9 +15,14 @@ $success = $_GET['success'] ?? '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* Hide browser native password reveal button */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear { display: none; }
+        input[type="password"]::-webkit-credentials-auto-fill-button { visibility: hidden; }
+
         * { box-sizing: border-box; }
         :root {
-            --qa-blue: #002D7A;
+            --qa-blue: #1e293b;
             --qa-blue-dark: #001A4A;
             --qa-orange: #F5A623;
             --qa-orange-hover: #D88E1B;
@@ -275,14 +280,43 @@ $success = $_GET['success'] ?? '';
     <!-- Login card -->
     <div class="login-card">
 
-        <?php if ($error): ?>
+        <?php if ($error):
+            $isUnverified = str_contains($error, 'Hindi pa na-verify');
+        ?>
             <div class="alert-custom">
                 <i class="bi bi-x-circle-fill"></i>
-                <?= htmlspecialchars($error) ?>
+                <div>
+                    <?= htmlspecialchars($error) ?>
+                    <?php if ($isUnverified): ?>
+                        <div style="margin-top:8px;">
+                            <a href="/irms/citizen/resend_verify.php"
+                               style="color:#1d4ed8;font-size:12px;font-weight:600;text-decoration:underline;">
+                                <i class="bi bi-envelope-arrow-up me-1"></i>
+                                Hindi natanggap? I-resend ang verification email
+                            </a>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php endif; ?>
 
-        <?php if ($success === 'registered'): ?>
+        <?php if ($success === 'verify_email'): ?>
+            <div class="alert-success-custom" style="background:#e0f2fe;border:1px solid #7dd3fc;color:#0c4a6e;">
+                <i class="bi bi-envelope-check-fill" style="color:#0284c7;"></i>
+                <div>
+                    <strong style="display:block;">Mag-check ng iyong email!</strong>
+                    <span style="font-size:12px;">Nagpadala kami ng verification link. I-click ito para ma-activate ang iyong account.</span>
+                </div>
+            </div>
+        <?php elseif ($success === 'verified'): ?>
+            <div class="alert-success-custom">
+                <i class="bi bi-patch-check-fill"></i>
+                <div>
+                    <strong style="display:block;">Email verified! ✅</strong>
+                    <span style="font-size:12px;">Na-activate na ang iyong account. Pwede ka nang mag-login.</span>
+                </div>
+            </div>
+        <?php elseif ($success === 'registered'): ?>
             <div class="alert-success-custom">
                 <i class="bi bi-check-circle-fill"></i>
                 Matagumpay na naka-register! Mag-login na.
@@ -290,6 +324,7 @@ $success = $_GET['success'] ?? '';
         <?php endif; ?>
 
         <form action="/irms/controllers/AuthController.php?action=login" method="POST">
+            <?= csrf_field() ?>
 
             <div class="mb-4">
                 <label class="form-label-custom">Email Address</label>
@@ -311,6 +346,14 @@ $success = $_GET['success'] ?? '';
                     <button type="button" class="toggle-pass" onclick="togglePassword()">
                         <i class="bi bi-eye" id="eye-icon"></i>
                     </button>
+                </div>
+                <div class="text-end mt-2">
+                    <a href="/irms/citizen/forgot_password.php"
+                       style="font-size:12px;color:#6b7280;text-decoration:none;"
+                       onmouseover="this.style.color='#1e293b'"
+                       onmouseout="this.style.color='#6b7280'">
+                        <i class="bi bi-question-circle me-1"></i>Nakalimutan ang password?
+                    </a>
                 </div>
             </div>
 

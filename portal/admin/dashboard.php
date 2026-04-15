@@ -149,7 +149,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">In Progress</div>
-                            <div class="fs-3 fw-bold text-primary"><?= $counts['in_progress'] ?></div>
+                            <div class="fs-3 fw-bold text-slate"><?= $counts['in_progress'] ?></div>
                         </div>
                     </div>
                 </div>

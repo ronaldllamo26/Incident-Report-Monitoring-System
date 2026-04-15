@@ -11,35 +11,45 @@ if (!isLoggedIn()) {
 
 $userId = $_SESSION['user_id'];
 
-// Get unread count + latest 10 notifications
-$stmt = $pdo->prepare("
-    SELECT id, title, message, incident_id, is_read, created_at
-    FROM notifications
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-    LIMIT 10
-");
-$stmt->execute([$userId]);
-$notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    // Get unread count + latest 10 notifications
+    $stmt = $pdo->prepare("
+        SELECT id, title, message, incident_id, is_read, created_at
+        FROM notifications
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT 10
+    ");
+    $stmt->execute([$userId]);
+    $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Unread count
-$countStmt = $pdo->prepare("
-    SELECT COUNT(*) FROM notifications
-    WHERE user_id = ? AND is_read = 0
-");
-$countStmt->execute([$userId]);
-$unreadCount = (int)$countStmt->fetchColumn();
+    // Unread count
+    $countStmt = $pdo->prepare("
+        SELECT COUNT(*) FROM notifications
+        WHERE user_id = ? AND is_read = 0
+    ");
+    $countStmt->execute([$userId]);
+    $unreadCount = (int)$countStmt->fetchColumn();
 
-// Format dates
-foreach ($notifications as &$notif) {
-    $notif['time_ago'] = timeAgo($notif['created_at']);
-    $notif['is_read']  = (bool)$notif['is_read'];
+    // Format dates
+    foreach ($notifications as &$notif) {
+        $notif['time_ago'] = timeAgo($notif['created_at']);
+        $notif['is_read']  = (bool)$notif['is_read'];
+    }
+
+    echo json_encode([
+        'count'         => $unreadCount,
+        'notifications' => $notifications
+    ]);
+
+} catch (Exception $e) {
+    // Return valid JSON even on error so the bell JS doesn't crash
+    echo json_encode([
+        'count'         => 0,
+        'notifications' => [],
+        'error'         => $e->getMessage()
+    ]);
 }
-
-echo json_encode([
-    'count'         => $unreadCount,
-    'notifications' => $notifications
-]);
 
 function timeAgo(string $datetime): string {
     $diff = time() - strtotime($datetime);

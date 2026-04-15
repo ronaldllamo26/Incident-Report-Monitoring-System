@@ -3,7 +3,9 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../config/mailer.php';
+require_once __DIR__ . '/../includes/functions.php';
 requireRole(['responder', 'admin']);
+validate_csrf();
 
 $model  = new Incident();
 $action = $_POST['action'] ?? '';
@@ -39,12 +41,11 @@ if ($action === 'update_status') {
     }
 
     // ── STATUS TRANSITION VALIDATION ──────────────────
-    // Prevent illegal transitions
     $validTransitions = [
         'pending'     => ['in_progress', 'closed'],
         'in_progress' => ['resolved', 'closed', 'pending'],
         'resolved'    => ['closed'],
-        'closed'      => [], // closed = final, walang pwedeng transition
+        'closed'      => [],
     ];
 
     if (!in_array($newStatus, $validTransitions[$oldStatus] ?? [])) {
@@ -88,6 +89,17 @@ if ($action === 'update_status') {
                 mailStatusUpdate($fullIncident, $newStatus, $remarks)
             );
         }
+
+        // ── IN-APP NOTIFICATION — Notify citizen pag may status update ──
+        if (!empty($fullIncident['reporter_id'])) {
+            createNotification(
+                $pdo,
+                (int)$fullIncident['reporter_id'],
+                'Status Update — ' . ucwords(str_replace('_', ' ', $newStatus)),
+                'Ang iyong report na "' . $fullIncident['title'] . '" ay na-update na.',
+                $id
+            );
+        }
     }
     // ──────────────────────────────────────────────────
 
@@ -109,6 +121,17 @@ if ($action === 'respond') {
 
     $model->addResponse($id, $user['id'], $message);
 
+    // ── IN-APP NOTIFICATION — Notify citizen pag may response ──
+    if (!empty($incident['reporter_id'])) {
+        createNotification(
+            $pdo,
+            (int)$incident['reporter_id'],
+            'Bagong Response sa Report',
+            'May nag-respond sa iyong report na "' . $incident['title'] . '".',
+            $id
+        );
+    }
+
     header('Location: ' . $back . '&success=' .
            urlencode('Na-send na ang response.'));
     exit;
@@ -117,25 +140,3 @@ if ($action === 'respond') {
 // Fallback
 header('Location: ' . $back);
 exit;
-
-// Notify citizen pag may status update
-if ($fullIncident['reporter_id']) {
-    createNotification(
-        $pdo,
-        $fullIncident['reporter_id'],
-        'Status Update — ' . ucwords(str_replace('_', ' ', $newStatus)),
-        'Ang iyong report na "' . $fullIncident['title'] . '" ay na-update na.',
-        $id
-    );
-}
-
-// Notify admin pag may bagong assignment
-if ($responderId) {
-    createNotification(
-        $pdo,
-        $responderId,
-        'Bagong Assigned Incident',
-        'Na-assign sa iyo ang incident: "' . $incident['title'] . '".',
-        $incidentId
-    );
-}

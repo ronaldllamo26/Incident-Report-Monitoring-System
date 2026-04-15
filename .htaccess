@@ -1,0 +1,120 @@
+# ══════════════════════════════════════════════════════════════
+#  IRMS — Root Apache Security Configuration
+#  Covers: Security Headers, Directory Protection, Sensitive
+#           File Blocking, and HTTPS Enforcement
+# ══════════════════════════════════════════════════════════════
+
+Options -Indexes
+
+# ── 1. HTTP SECURITY HEADERS ──────────────────────────────────
+<IfModule mod_headers.c>
+
+    # Prevent your pages from being embedded in iframes on other sites
+    # (Clickjacking protection)
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Force browsers to respect the declared Content-Type
+    # (Blocks MIME-sniffing attacks)
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Control how much referrer info is sent to external sites
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Disable powerful browser features that this app doesn't need
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=()"
+
+    # Enable browser's built-in XSS filter (older browsers)
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Content Security Policy — restrict where scripts, styles, fonts
+    # and media can be loaded from. Mirrors the CDNs used in IRMS.
+    Header always set Content-Security-Policy "\
+default-src 'self'; \
+script-src 'self' 'unsafe-inline' \
+    https://cdn.jsdelivr.net \
+    https://unpkg.com \
+    https://api.mapbox.com \
+    https://cdnjs.cloudflare.com; \
+style-src 'self' 'unsafe-inline' \
+    https://cdn.jsdelivr.net \
+    https://fonts.googleapis.com \
+    https://unpkg.com \
+    https://api.mapbox.com \
+    https://cdnjs.cloudflare.com; \
+font-src 'self' \
+    https://fonts.gstatic.com \
+    https://cdn.jsdelivr.net \
+    data:; \
+img-src 'self' data: blob: \
+    https://*.mapbox.com \
+    https://*.openstreetmap.org \
+    https://*.basemaps.cartocdn.com \
+    https://server.arcgisonline.com \
+    https://unpkg.com \
+    https://cdnjs.cloudflare.com; \
+connect-src 'self' \
+    https://api.mapbox.com \
+    https://events.mapbox.com \
+    https://nominatim.openstreetmap.org; \
+worker-src blob:; \
+object-src 'none'; \
+base-uri 'self'; \
+form-action 'self'; \
+frame-ancestors 'self';"
+
+    # Remove server version info from response headers
+    Header always unset X-Powered-By
+    Header always unset Server
+
+</IfModule>
+
+# ── 2. BLOCK DIRECT ACCESS TO SENSITIVE DIRECTORIES/FILES ─────
+
+# Block access to config files
+<FilesMatch "\.(sql|log|env|ini|sh|bat|bak|swp|DS_Store)$">
+    Require all denied
+</FilesMatch>
+
+# Block access to composer/git files
+<FilesMatch "^(composer\.(json|lock)|\.gitignore|\.git|README\.md)$">
+    Require all denied
+</FilesMatch>
+
+# Protect sensitive folders — controllers, models, config, includes
+# should never be directly browsable
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct HTTP access to back-end folders.
+    # WHITELIST: Only the controllers that HTML forms POST to are allowed.
+    # Everything else in /controllers/ and all other back-end folders = 403.
+
+    # Block all controllers EXCEPT the three form-facing ones
+    RewriteCond %{REQUEST_URI} ^/irms/controllers/
+    RewriteCond %{REQUEST_URI} !^/irms/controllers/AuthController\.php
+    RewriteCond %{REQUEST_URI} !^/irms/controllers/IncidentController\.php
+    RewriteCond %{REQUEST_URI} !^/irms/controllers/AnonReportController\.php
+    RewriteRule ^ - [F,L]
+
+    # Block all other sensitive back-end folders entirely
+    RewriteRule ^(models|config|includes|libs|vendor)/ - [F,L]
+
+    # Redirect HTTP → HTTPS (uncomment when deployed with SSL)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+</IfModule>
+
+# ── 3. PHP ERROR DISPLAY — never expose errors to the browser ──
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_flag log_errors On
+</IfModule>
+
+# ── 4. PREVENT HOTLINKING OF UPLOADED IMAGES ──────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTP_REFERER} !^$
+    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?localhost [NC]
+    RewriteRule \.(jpg|jpeg|png|gif|webp)$ - [F,NC]
+</IfModule>

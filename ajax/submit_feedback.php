@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../models/Incident.php';
 requireRole('citizen');
+validate_csrf();
 
 $model      = new Incident();
 $user       = currentUser();

@@ -16,8 +16,8 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
-            --qc-blue:   #003DA5;
-            --qc-blue2:  #002D7A;
+            --qc-blue:   #111827;
+            --qc-blue2:  #1e293b;
             --qc-blue3:  #1A5CC8;
             --qc-gold:   #F5A623;
             --qc-gold2:  #D4891A;

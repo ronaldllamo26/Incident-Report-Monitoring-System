@@ -24,9 +24,14 @@ $success = $_GET['success'] ?? '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* Hide browser native password reveal button */
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear { display: none; }
+        input[type="password"]::-webkit-credentials-auto-fill-button { visibility: hidden; }
+
         * { box-sizing: border-box; }
         :root {
-            --qa-blue: #002D7A;
+            --qa-blue: #1e293b;
             --qa-blue-dark: #001A4A;
             --qa-orange: #F5A623;
             --qa-orange-hover: #D88E1B;
@@ -302,6 +307,7 @@ $success = $_GET['success'] ?? '';
 
         <form action="/irms/controllers/AuthController.php?action=login&portal=staff"
               method="POST" id="login-form">
+            <?= csrf_field() ?>
 
             <div class="mb-4">
                 <label class="form-label-custom">Email Address</label>

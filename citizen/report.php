@@ -27,7 +27,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
         #map {
             height: 360px;
             border-radius: 8px;
-            border: 2px solid #003DA5;
+            border: 2px solid #111827;
             z-index: 0;
             background: #0f172a;
         }
@@ -59,10 +59,10 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
             display: flex; align-items: center; gap: 6px;
         }
         .glass-btn:hover { background: #fff; transform: translateY(-1px); }
-        .glass-btn.active { background: #003DA5; color: #fff; }
+        .glass-btn.active { background: #111827; color: #fff; }
         #map-wrapper {
             position: relative; border-radius: 10px; overflow: hidden;
-            border: 2px solid #003DA5; box-shadow: 0 4px 16px rgba(0,61,165,0.15);
+            border: 2px solid #111827; box-shadow: 0 4px 16px rgba(0,61,165,0.15);
         }
         #qc-badge {
             position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -110,7 +110,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 <body class="bg-light">
 
 <!-- Navbar -->
-<nav class="navbar navbar-dark" style="background:#002D7A;border-bottom:3px solid #F5A623;">
+<nav class="navbar navbar-dark" style="background:#1e293b;border-bottom:3px solid #F5A623;">
     <div class="container">
         <a class="navbar-brand fw-semibold d-flex align-items-center gap-2"
            href="/irms/citizen/dashboard.php">
@@ -193,7 +193,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="/irms/public/track.php?tracking=<?= urlencode($dupTracking) ?>"
-                       class="btn btn-sm" style="background:#003DA5;color:#fff;font-weight:600;">
+                       class="btn btn-sm" style="background:#111827;color:#fff;font-weight:600;">
                         <i class="bi bi-search me-1"></i> I-track ang Existing Report
                     </a>
                     <button type="button" class="btn btn-sm btn-outline-secondary fw-medium"
@@ -208,6 +208,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                 <div class="card-body p-4">
                     <form action="/irms/controllers/IncidentController.php?action=submit"
                           method="POST" enctype="multipart/form-data" id="report-form">
+                        <?= csrf_field() ?>
 
                         <!-- Title -->
                         <div class="mb-3">
@@ -301,7 +302,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                         <div class="mb-3">
                             <label class="form-label small fw-medium d-flex align-items-center gap-2 mb-2">
                                 I-pin ang Eksaktong Lokasyon
-                                <span class="badge" style="background:#003DA5;color:#F5A623;font-size:10px;font-weight:700;">
+                                <span class="badge" style="background:#111827;color:#F5A623;font-size:10px;font-weight:700;">
                                     QUEZON CITY ONLY
                                 </span>
                             </label>
@@ -587,7 +588,10 @@ function checkDuplicate() {
     dupCheckTimer = setTimeout(function() {
         fetch('/irms/ajax/check_duplicate.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-TOKEN': document.querySelector('[name="csrf_token"]').value
+            },
             body: 'lat=' + lat + '&lng=' + lng + '&category=' + cat
         })
         .then(function(r) { return r.json(); })

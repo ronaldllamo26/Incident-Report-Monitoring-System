@@ -126,6 +126,7 @@ $error   = $_GET['error']   ?? '';
                                     <td><span class="badge bg-<?= $statusColor[$inc['status']] ?> small"><?= ucwords(str_replace('_',' ',$inc['status'])) ?></span></td>
                                     <td>
                                         <form action="/irms/ajax/assign_responder.php" method="POST" class="d-flex gap-1">
+                        <?= csrf_field() ?>
                                             <input type="hidden" name="incident_id" value="<?= $inc['id'] ?>">
                                             <select name="responder_id" class="form-select form-select-sm" style="min-width:130px;font-size:12px;">
                                                 <option value="">Unassigned</option>
@@ -136,8 +137,11 @@ $error   = $_GET['error']   ?? '';
                                             <button type="submit" class="btn btn-outline-secondary btn-sm" title="Assign"><i class="bi bi-check2"></i></button>
                                         </form>
                                     </td>
-                                    <td class="small text-muted"><?= date('M d, Y', strtotime($inc['reported_at'])) ?></td>
-                                    <td><a href="/irms/portal/admin/view_incident.php?id=<?= $inc['id'] ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i></a></td>
+                                     <td class="small text-muted"><?= date('M d, Y', strtotime($inc['reported_at'])) ?></td>
+                                     <td>
+                                         <a href="/irms/portal/admin/view_incident.php?id=<?= $inc['id'] ?>" class="btn btn-outline-primary btn-sm" title="Tingnan"><i class="bi bi-eye"></i></a>
+                                         <a href="/irms/portal/admin/export_pdf.php?id=<?= $inc['id'] ?>" class="btn btn-outline-secondary btn-sm ms-1" title="I-export PDF" target="_blank"><i class="bi bi-file-earmark-pdf"></i></a>
+                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>

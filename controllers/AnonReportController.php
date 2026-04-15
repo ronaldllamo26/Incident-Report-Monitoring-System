@@ -3,10 +3,30 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../includes/functions.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: /irms/public/report.php');
     exit;
 }
+
+validate_csrf();
+
+// ── RATE LIMITING (Anonymous Reports) ────────────────────────
+// Max 3 anonymous reports per IP per hour.
+// Prevents spam/bot flooding without requiring login.
+$_anonIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+if (str_contains($_anonIp, ',')) {
+    $_anonIp = trim(explode(',', $_anonIp)[0]);
+}
+if (isRateLimited($pdo, $_anonIp, 'anon_report', 3, 3600)) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Masyadong maraming reports mula sa iyong koneksyon. Subukan ulit pagkatapos ng isang oras.'));
+    exit;
+}
+// ─────────────────────────────────────────────────────────────
 
 $title     = trim($_POST['title']        ?? '');
 $cat       = (int)($_POST['category_id'] ?? 0);
@@ -25,6 +45,35 @@ if (!$title || !$cat || !$severity || !$desc || !$location) {
            urlencode('Punan ang lahat ng required fields.'));
     exit;
 }
+
+// ── INPUT LENGTH LIMITS ───────────────────────────────────────
+// Server-side guard — HTML maxlength can be bypassed by curl/Postman
+if (mb_strlen($title) > 150) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Ang pamagat ay hindi dapat hihigit sa 150 characters.'));
+    exit;
+}
+if (mb_strlen($desc) > 3000) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Ang deskripsyon ay hindi dapat hihigit sa 3000 characters.'));
+    exit;
+}
+if (mb_strlen($location) > 255) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Ang lokasyon ay hindi dapat hihigit sa 255 characters.'));
+    exit;
+}
+if ($anonName && mb_strlen($anonName) > 100) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Ang pangalan ay hindi dapat hihigit sa 100 characters.'));
+    exit;
+}
+if ($anonPhone && mb_strlen($anonPhone) > 20) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Hindi valid ang phone number.'));
+    exit;
+}
+// ─────────────────────────────────────────────────────────────
 if (!$lat || !$lng) {
     header('Location: /irms/public/report.php?error=' .
            urlencode('I-pin muna ang lokasyon sa mapa.'));
@@ -44,6 +93,12 @@ if ($lat < 14.4764 || $lat > 14.7800 || $lng < 120.9980 || $lng > 121.1764) {
            urlencode('Hindi pwedeng mag-submit — ang lokasyon ay nasa labas ng Quezon City.'));
     exit;
 }
+
+// ── RECORD RATE HIT (only after all validation passes) ───────
+// We count only valid, well-formed submissions — not typo retries.
+recordRateHit($pdo, $_anonIp, 'anon_report', 3600);
+// ─────────────────────────────────────────────────────────────
+
 
 // ── DUPLICATE DETECTION ────────────────────────────────
 $dupStmt = $pdo->prepare("
@@ -128,15 +183,21 @@ $pdo->prepare("
     VALUES (?, NULL, NULL, 'pending', ?)
 ")->execute([$incidentId, $remarks]);
 
-// Photo uploads
+// Photo uploads (with strict MIME type + magic byte validation)
 if (!empty($_FILES['photos']['name'][0])) {
     $uploadDir = __DIR__ . '/../uploads/';
-    $allowed   = ['jpg','jpeg','png','gif','webp'];
     foreach ($_FILES['photos']['tmp_name'] as $i => $tmp) {
         if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) continue;
-        $ext = strtolower(pathinfo($_FILES['photos']['name'][$i], PATHINFO_EXTENSION));
-        if (!in_array($ext, $allowed)) continue;
-        $filename = uniqid('anon_', true) . '.' . $ext;
+
+        $check = validateUploadedImage($tmp, $_FILES['photos']['name'][$i]);
+        if (!$check['valid']) {
+            // Skip invalid file — log the rejection
+            logAudit($pdo, null, 'upload_rejected', 'incident', $incidentId,
+                'File rejected: ' . $_FILES['photos']['name'][$i] . ' — ' . $check['error']);
+            continue;
+        }
+
+        $filename = uniqid('anon_', true) . '.' . $check['ext'];
         if (move_uploaded_file($tmp, $uploadDir . $filename)) {
             $pdo->prepare("
                 INSERT INTO attachments (incident_id, file_name, file_path, file_type)
@@ -145,11 +206,41 @@ if (!empty($_FILES['photos']['name'][0])) {
                 $incidentId,
                 $_FILES['photos']['name'][$i],
                 'uploads/' . $filename,
-                $_FILES['photos']['type'][$i],
+                $check['mime'], // Server-detected MIME, NOT client-supplied
             ]);
         }
     }
 }
+
+// ── IN-APP NOTIFICATIONS ─────────────────────────────────
+// Notify all admins about the new anonymous report
+$adminStmt = $pdo->prepare("SELECT id FROM users WHERE role = 'admin' AND is_active = 1");
+$adminStmt->execute();
+$admins = $adminStmt->fetchAll();
+
+$reporterLabel = $anonName ?: 'Anonymous';
+foreach ($admins as $admin) {
+    createNotification(
+        $pdo,
+        (int)$admin['id'],
+        'Bagong Incident Report',
+        'May bagong anonymous report: "' . $title . '" mula kay ' . $reporterLabel . '.',
+        $incidentId
+    );
+}
+
+// Notify auto-assigned responder (if any)
+$fullIncident = $model->getById($incidentId);
+if ($fullIncident && !empty($fullIncident['assigned_to'])) {
+    createNotification(
+        $pdo,
+        (int)$fullIncident['assigned_to'],
+        'Bagong Assigned Incident',
+        'Na-assign sa iyo ang incident: "' . $title . '".',
+        $incidentId
+    );
+}
+// ──────────────────────────────────────────────────────────
 
 // Audit log
 logAudit($pdo, null, 'anonymous_report_submitted', 'incident', $incidentId,

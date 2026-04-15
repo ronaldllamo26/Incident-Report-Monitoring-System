@@ -2,7 +2,9 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';   // $pdo available na dito
 require_once __DIR__ . '/../models/Incident.php';
+require_once __DIR__ . '/../includes/functions.php';
 requireRole('admin');
+validate_csrf();
 
 $model       = new Incident();
 $incidentId  = (int)($_POST['incident_id']  ?? 0);
@@ -14,9 +16,32 @@ if (!$incidentId) {
     exit;
 }
 
+$incident = $model->getById($incidentId);
+
 if ($responderId) {
     // May piniling responder — i-assign
     $model->assignResponder($incidentId, $responderId);
+
+    // ── IN-APP NOTIFICATION — Notify responder na na-assign siya ──
+    $incidentTitle = $incident['title'] ?? 'Incident #' . $incidentId;
+    createNotification(
+        $pdo,
+        $responderId,
+        'Bagong Assigned Incident',
+        'Na-assign sa iyo ang incident: "' . $incidentTitle . '".',
+        $incidentId
+    );
+
+    // ── Notify citizen na may naka-assign na sa report nila ──
+    if (!empty($incident['reporter_id'])) {
+        createNotification(
+            $pdo,
+            (int)$incident['reporter_id'],
+            'Responder Assigned',
+            'May na-assign nang responder sa iyong report na "' . $incidentTitle . '".',
+            $incidentId
+        );
+    }
 } else {
     // Walang pinili — i-unassign
     $pdo->prepare("UPDATE incidents SET assigned_to = NULL, updated_at = NOW() WHERE id = ?")

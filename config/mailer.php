@@ -74,6 +74,94 @@ function sendMail(
  * Lahat ng email templates naka-centralize dito
  */
 
+// ── TEMPLATE: Email Verification ──────────────────────
+function mailVerifyEmail(string $name, string $token, string $baseUrl = 'http://localhost'): string {
+    $verifyUrl = rtrim($baseUrl, '/') . '/irms/public/verify_email.php?token=' . urlencode($token);
+
+    return mailWrapper(
+        'I-verify ang iyong Email Address',
+        "
+        <p>Mahal na <strong>" . htmlspecialchars($name) . "</strong>,</p>
+        <p>Salamat sa pagrehistro sa <strong>IRMS — QC-ALERTO</strong>!
+           Para ma-activate ang iyong account, i-click ang button sa ibaba
+           para ma-verify ang iyong email address.</p>
+
+        <div style='text-align:center;margin:28px 0;'>
+            <a href='{$verifyUrl}'
+               style='background:#1e293b;color:#fff;padding:14px 36px;
+                      border-radius:8px;text-decoration:none;font-weight:700;
+                      font-size:15px;display:inline-block;
+                      box-shadow:0 4px 12px rgba(0,45,122,0.3);'>
+                ✅ I-verify ang Aking Email
+            </a>
+        </div>
+
+        <p style='font-size:12px;color:#666;'>
+            Hindi gumagana ang button? Kopyahin at i-paste ang link na ito
+            sa iyong browser:<br>
+            <a href='{$verifyUrl}'
+               style='color:#1e293b;word-break:break-all;font-size:11px;'>
+               {$verifyUrl}
+            </a>
+        </p>
+
+        <div style='background:#fef9ec;border-left:4px solid #F5A623;
+                    padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0;'>
+            <p style='font-size:13px;color:#92400e;margin:0;'>
+                ⚠️ Ang verification link ay valid lamang sa loob ng
+                <strong>24 na oras</strong>.<br>
+                Kung hindi ikaw ito, balewalain lang ang email na ito —
+                ang iyong address ay hindi gagamitin.
+            </p>
+        </div>
+        "
+    );
+}
+
+// ── TEMPLATE: Password Reset ───────────────────────────
+function mailPasswordReset(string $name, string $token, string $baseUrl = 'http://localhost'): string {
+    $resetUrl = rtrim($baseUrl, '/') . '/irms/citizen/reset_password.php?token=' . urlencode($token);
+
+    return mailWrapper(
+        'I-reset ang iyong Password',
+        "
+        <p>Mahal na <strong>" . htmlspecialchars($name) . "</strong>,</p>
+        <p>Nakatanggap kami ng kahilingan na i-reset ang password ng iyong
+           <strong>IRMS — QC-ALERTO</strong> account.
+           I-click ang button sa ibaba para pumili ng bagong password.</p>
+
+        <div style='text-align:center;margin:28px 0;'>
+            <a href='{$resetUrl}'
+               style='background:#dc2626;color:#fff;padding:14px 36px;
+                      border-radius:8px;text-decoration:none;font-weight:700;
+                      font-size:15px;display:inline-block;
+                      box-shadow:0 4px 12px rgba(220,38,38,0.3);'>
+                🔑 I-reset ang Password
+            </a>
+        </div>
+
+        <p style='font-size:12px;color:#666;'>
+            Hindi gumagana ang button? Kopyahin at i-paste ang link na ito
+            sa iyong browser:<br>
+            <a href='{$resetUrl}'
+               style='color:#dc2626;word-break:break-all;font-size:11px;'>
+               {$resetUrl}
+            </a>
+        </p>
+
+        <div style='background:#fef2f2;border-left:4px solid #dc2626;
+                    padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0;'>
+            <p style='font-size:13px;color:#991b1b;margin:0;'>
+                ⚠️ Ang reset link ay valid lamang sa loob ng
+                <strong>1 oras</strong>.<br>
+                Kung hindi ikaw humiling nito, balewalain lang ang email na ito —
+                ang iyong password ay hindi mababago.
+            </p>
+        </div>
+        "
+    );
+}
+
 // ── TEMPLATE: Report Confirmation (para sa citizen) ───
 function mailReportConfirmation(array $incident, string $tracking = ''): string {
     $trackingSection = $tracking

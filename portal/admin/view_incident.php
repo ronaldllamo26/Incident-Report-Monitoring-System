@@ -85,8 +85,13 @@ $error   = $_GET['error']   ?? '';
                     <h6 class="fw-semibold mb-0">Incident #<?= $id ?></h6>
                 </div>
             </div>
-             <div class="d-flex align-items-center gap-2">
+         <div class="d-flex align-items-center gap-2">
                 <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+                <a href="/irms/portal/admin/export_pdf.php?id=<?= $id ?>"
+                   class="btn btn-sm btn-outline-secondary"
+                   title="I-download bilang PDF" target="_blank">
+                    <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                </a>
                 <span class="badge bg-<?= $statusColor[$incident['status']] ?>">
                     <?= ucwords(str_replace('_',' ',$incident['status'])) ?>
                 </span>
@@ -182,6 +187,7 @@ $error   = $_GET['error']   ?? '';
                                 <i class="bi bi-chat-dots me-1"></i> Mag-respond bilang Admin
                             </p>
                             <form action="/irms/ajax/update_status.php" method="POST">
+                        <?= csrf_field() ?>
                                 <input type="hidden" name="incident_id" value="<?= $id ?>">
                                 <input type="hidden" name="action" value="respond">
                                 <textarea name="message" class="form-control mb-2" rows="3"
@@ -248,6 +254,7 @@ $error   = $_GET['error']   ?? '';
                                 Na-resolve na — pwede mo nang i-close.
                             </div>
                             <form action="/irms/ajax/update_status.php" method="POST">
+                        <?= csrf_field() ?>
                                 <input type="hidden" name="incident_id" value="<?= $id ?>">
                                 <input type="hidden" name="action" value="update_status">
                                 <input type="hidden" name="old_status" value="resolved">
@@ -262,6 +269,7 @@ $error   = $_GET['error']   ?? '';
 
                             <?php elseif ($incident['status'] !== 'closed'): ?>
                             <form action="/irms/ajax/update_status.php" method="POST">
+                        <?= csrf_field() ?>
                                 <input type="hidden" name="incident_id" value="<?= $id ?>">
                                 <input type="hidden" name="action" value="update_status">
                                 <input type="hidden" name="old_status" value="<?= $incident['status'] ?>">
@@ -300,6 +308,7 @@ $error   = $_GET['error']   ?? '';
                                 <i class="bi bi-person-badge me-1"></i> Assign Responder
                             </p>
                             <form action="/irms/ajax/assign_responder.php" method="POST">
+                        <?= csrf_field() ?>
                                 <input type="hidden" name="incident_id" value="<?= $id ?>">
                                 <div class="mb-2">
                                     <select name="responder_id" class="form-select form-select-sm">

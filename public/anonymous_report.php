@@ -1,6 +1,5 @@
 <?php
-require_once __DIR__ . '/../includes/auth.php';  // para sa citizen/ at portal/
-require_once __DIR__ . '/../includes/auth.php'; // para sa portal/admin/ at portal/responder/
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';
 
 // Pag naka-login na, i-redirect sa normal report form
@@ -69,14 +68,14 @@ $error = $_GET['error'] ?? '';
             gap: 6px;
         }
         .glass-btn:hover { background: #fff; transform: translateY(-1px); }
-        .glass-btn.active { background: #003DA5; color: #fff; }
+        .glass-btn.active { background: #111827; color: #fff; }
         
         /* ── MAP CONTAINER ─────────────────────────────── */
         #map-wrapper {
             position: relative;
             border-radius: 10px;
             overflow: hidden;
-            border: 2px solid #003DA5;
+            border: 2px solid #111827;
             box-shadow: 0 4px 16px rgba(0, 61, 165, 0.15);
         }
 
@@ -155,6 +154,7 @@ $error = $_GET['error'] ?? '';
                 <div class="card-body p-4">
                     <form action="/irms/controllers/AnonReportController.php"
                           method="POST" enctype="multipart/form-data" id="report-form">
+                        <?= csrf_field() ?>
 
                         <!-- Reporter info (optional) -->
                         <div class="mb-4 p-3 bg-light rounded">
@@ -264,7 +264,7 @@ $error = $_GET['error'] ?? '';
                             <label class="form-label small fw-medium d-flex align-items-center gap-2 mb-2">
                                 I-pin ang Eksaktong Lokasyon
                                 <span class="badge"
-                                      style="background:#003DA5;color:#F5A623;font-size:10px;font-weight:700;">
+                                      style="background:#111827;color:#F5A623;font-size:10px;font-weight:700;">
                                     QUEZON CITY ONLY
                                 </span>
                             </label>

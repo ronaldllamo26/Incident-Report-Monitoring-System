@@ -9,8 +9,16 @@ class User {
         $this->pdo = $pdo;
     }
 
+    /**
+     * Find a user by email. Returns the user row regardless of email_verified
+     * status so that the caller (AuthController) can give a specific message.
+     * Still requires is_active = 1 — deactivated users cannot login.
+     */
     public function findByEmail(string $email): array|false {
-        $stmt = $this->pdo->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM users
+            WHERE email = ? AND is_active = 1
+        ");
         $stmt->execute([$email]);
         return $stmt->fetch();
     }
@@ -27,17 +35,75 @@ class User {
         return (bool) $stmt->fetch();
     }
 
-    public function create(array $data): bool {
+    /**
+     * Create a new citizen account in unverified state.
+     * Returns the new user's ID on success, false on failure.
+     *
+     * @param array $data Must include: name, email, password, verify_token,
+     *                    verify_token_expires. Optional: phone, address.
+     * @return int|false
+     */
+    public function create(array $data): int|false {
         $stmt = $this->pdo->prepare("
-            INSERT INTO users (name, email, password, phone, address, role)
-            VALUES (:name, :email, :password, :phone, :address, 'citizen')
+            INSERT INTO users
+                (name, email, password, phone, address, role,
+                 email_verified, verify_token, verify_token_expires)
+            VALUES
+                (:name, :email, :password, :phone, :address, 'citizen',
+                 0, :token, :expires)
         ");
-        return $stmt->execute([
-            ':name'     => $data['name'],
-            ':email'    => $data['email'],
-            ':password' => password_hash($data['password'], PASSWORD_BCRYPT),
-            ':phone'    => $data['phone'] ?? null,
-            ':address'  => $data['address'] ?? null,
+
+        $result = $stmt->execute([
+            ':name'    => $data['name'],
+            ':email'   => $data['email'],
+            ':password'=> password_hash($data['password'], PASSWORD_BCRYPT),
+            ':phone'   => $data['phone']   ?? null,
+            ':address' => $data['address'] ?? null,
+            ':token'   => $data['verify_token'],
+            ':expires' => $data['verify_token_expires'],
         ]);
+
+        return $result ? (int) $this->pdo->lastInsertId() : false;
+    }
+
+    /**
+     * Verify an account using a token from a verification email link.
+     *
+     * @return string 'verified' | 'expired' | 'invalid'
+     */
+    public function verifyByToken(string $token): string {
+        // Find user by token — include expired ones so we can distinguish
+        $stmt = $this->pdo->prepare("
+            SELECT id, verify_token_expires, email_verified
+            FROM users
+            WHERE verify_token = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch();
+
+        if (!$user) {
+            return 'invalid'; // Token not found or already cleared
+        }
+
+        if ($user['email_verified']) {
+            return 'invalid'; // Already verified — treat as invalid link
+        }
+
+        if ($user['verify_token_expires'] === null ||
+            strtotime($user['verify_token_expires']) < time()) {
+            return 'expired'; // Token found but expired
+        }
+
+        // ── Mark as verified, clear token ─────────────────
+        $this->pdo->prepare("
+            UPDATE users
+            SET email_verified        = 1,
+                verify_token          = NULL,
+                verify_token_expires  = NULL
+            WHERE id = ?
+        ")->execute([$user['id']]);
+
+        return 'verified';
     }
 }

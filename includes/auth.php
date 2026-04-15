@@ -1,7 +1,30 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) {
+    // ── SECURE SESSION COOKIE FLAGS ───────────────────────────
+    // Must be set BEFORE session_start() to take effect.
+    //
+    //  HttpOnly   → JavaScript cannot read the session cookie
+    //               (blocks XSS-based cookie theft)
+    //  SameSite   → Cookie not sent on cross-site requests
+    //               (extra CSRF layer on top of our CSRF tokens)
+    //  Secure     → Cookie only sent over HTTPS
+    //               (auto-disabled on localhost for dev comfort)
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+               || ($_SERVER['SERVER_PORT'] ?? 80) == 443;
+
+    session_set_cookie_params([
+        'lifetime' => 0,            // Session cookie (expires on browser close)
+        'path'     => '/',
+        'domain'   => '',           // Current domain only
+        'secure'   => $isHttps,     // HTTPS only when deployed
+        'httponly' => true,         // No JS access
+        'samesite' => 'Strict',     // No cross-site sending
+    ]);
+    // ─────────────────────────────────────────────────────────
+
     session_start();
 }
+require_once __DIR__ . '/functions.php';
 
 /**
  * Check kung logged in ang user

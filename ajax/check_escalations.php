@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../config/mailer.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 header('Content-Type: application/json');
 
@@ -11,7 +12,7 @@ $count    = 0;
 
 // Kunin ang lahat ng admin emails
 $admins = $pdo->query("
-    SELECT email, name FROM users
+    SELECT id, email, name FROM users
     WHERE role = 'admin' AND is_active = 1
 ")->fetchAll();
 
@@ -29,8 +30,18 @@ foreach ($breached as $inc) {
         $inc['status'],
     ]);
 
-    // ── EMAIL SA LAHAT NG ADMIN ────────────────
+    // ── NOTIFY ADMINS (email + in-app bell) ──────
     foreach ($admins as $admin) {
+        // In-app notification (bell)
+        createNotification(
+            $pdo,
+            (int)$admin['id'],
+            'SLA Breach — Escalated',
+            'SLA breached sa incident: "' . $inc['title'] . '" (#' . $inc['id'] . '). Nag-escalate na.',
+            $inc['id']
+        );
+
+        // Email notification
         sendMail(
             $admin['email'],
             '🚨 SLA Breach — Incident #' . $inc['id'] . ' Escalated',

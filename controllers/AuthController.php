@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../models/User.php';
+require_once __DIR__ . '/../config/mailer.php';
 
 class AuthController {
 
@@ -14,6 +15,7 @@ class AuthController {
 
     public function login(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') return;
+        validate_csrf();
 
         $email    = trim($_POST['email']    ?? '');
         $password = $_POST['password']      ?? '';
@@ -34,12 +36,44 @@ class AuthController {
             return;
         }
 
+        // ── BRUTE FORCE CHECK ─────────────────────────────
+        // Detect real IP (handles proxy/ngrok setups)
+        global $pdo;
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        if (str_contains($ip, ',')) {
+            $ip = trim(explode(',', $ip)[0]);
+        }
+
+        $lockCheck = isLoginLocked($pdo, $ip, $email);
+        if ($lockCheck['locked']) {
+            $minsLeft = (int) ceil($lockCheck['seconds_left'] / 60);
+            $this->redirectWithError(
+                "Sobrang daming mali — naka-lock pa ng {$minsLeft} minuto. Subukan ulit mamaya.",
+                $portal
+            );
+            return;
+        }
+        // ──────────────────────────────────────────────────
+
         $user = $this->user->findByEmail($email);
 
         if (!$user || !password_verify($password, $user['password'])) {
+            // Record the failed attempt (locks after MAX_LOGIN_ATTEMPTS)
+            recordFailedAttempt($pdo, $ip, $email);
             $this->redirectWithError('Mali ang email o password.', $portal);
             return;
         }
+
+        // ── EMAIL VERIFICATION CHECK ──────────────────────
+        // Show specific message instead of generic auth error
+        if (empty($user['email_verified'])) {
+            $this->redirectWithError(
+                'Hindi pa na-verify ang iyong email. Tingnan ang iyong inbox at i-click ang verification link.',
+                $portal
+            );
+            return;
+        }
+        // ──────────────────────────────────────────────────
 
         // ── PORTAL VALIDATION ─────────────────────────────
         if ($portal === 'staff' && $user['role'] === 'citizen') {
@@ -56,13 +90,22 @@ class AuthController {
             exit;
         }
 
+        // ── LOGIN SUCCESS: clear brute force counter ──────
+        clearLoginAttempts($pdo, $ip, $email);
+
+        // ── SESSION FIXATION PREVENTION ───────────────────
+        // Regenerate the session ID on privilege escalation
+        // (anonymous → authenticated). Deletes the old session
+        // file so an attacker cannot reuse a pre-planted ID.
+        session_regenerate_id(true);
+        // ──────────────────────────────────────────────────
+
         // ── SET SESSION ───────────────────────────────────
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
         $_SESSION['role']    = $user['role'];
 
         // ── AUDIT LOG — login ─────────────────────────────
-        global $pdo;
         logAudit(
             $pdo,
             $user['id'],
@@ -78,6 +121,7 @@ class AuthController {
 
     public function register(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') return;
+        validate_csrf();
 
         $name     = trim($_POST['name']             ?? '');
         $email    = trim($_POST['email']            ?? '');
@@ -107,19 +151,46 @@ class AuthController {
             return;
         }
 
-        $created = $this->user->create([
-            'name'     => $name,
-            'email'    => $email,
-            'password' => $password,
-            'phone'    => $phone,
-            'address'  => $address,
+        // ── GENERATE VERIFICATION TOKEN ───────────────────
+        // 64-char hex token (cryptographically secure)
+        $verifyToken   = bin2hex(random_bytes(32));
+        $verifyExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+        // ──────────────────────────────────────────────────
+
+        $userId = $this->user->create([
+            'name'                  => $name,
+            'email'                 => $email,
+            'password'              => $password,
+            'phone'                 => $phone,
+            'address'               => $address,
+            'verify_token'          => $verifyToken,
+            'verify_token_expires'  => $verifyExpires,
         ]);
 
-        if ($created) {
-            header('Location: /irms/citizen/login.php?success=registered');
-        } else {
+        if (!$userId) {
             $this->redirectWithError('May error sa pagre-register. Subukan ulit.', 'citizen', 'register');
+            exit;
         }
+
+        // ── SEND VERIFICATION EMAIL ───────────────────────
+        // Build base URL from current request so link works on any device
+        $scheme  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        try {
+            sendMail(
+                $email,
+                'I-verify ang iyong email — IRMS',
+                mailVerifyEmail($name, $verifyToken, $baseUrl)
+            );
+        } catch (Exception $e) {
+            error_log('Verification email failed for ' . $email . ': ' . $e->getMessage());
+            // Don't block registration even if email fails
+        }
+        // ──────────────────────────────────────────────────
+
+        // Redirect to login with instruction to check email
+        header('Location: /irms/citizen/login.php?success=verify_email');
         exit;
     }
 

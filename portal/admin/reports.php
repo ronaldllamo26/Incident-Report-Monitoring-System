@@ -87,7 +87,7 @@ $sevColor    = ['low'=>'success','medium'=>'warning','high'=>'danger','critical'
             <div class="row g-3 mb-4">
                 <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold"><?= count($incidents) ?></div><div class="small text-muted">Total</div></div></div>
                 <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-warning"><?= $counts['pending'] ?></div><div class="small text-muted">Pending</div></div></div>
-                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-primary"><?= $counts['in_progress'] ?></div><div class="small text-muted">In Progress</div></div></div>
+                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-slate"><?= $counts['in_progress'] ?></div><div class="small text-muted">In Progress</div></div></div>
                 <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-success"><?= $counts['resolved'] ?></div><div class="small text-muted">Resolved</div></div></div>
             </div>
 

@@ -14,6 +14,7 @@
  */
 
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 header('Content-Type: application/json');
 
@@ -22,6 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['duplicate' => false]);
     exit;
 }
+
+// CSRF protection
+validate_csrf();
+
 
 $lat      = floatval($_POST['lat']      ?? 0);
 $lng      = floatval($_POST['lng']      ?? 0);

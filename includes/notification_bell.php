@@ -64,9 +64,9 @@
 
         <!-- Footer -->
         <div style="padding:10px 16px;border-top:1px solid #f1f5f9;text-align:center;">
-            <a href="#" onclick="markAllRead(); return false;"
-               style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;">
-                I-clear lahat
+            <a href="#" onclick="clearAllNotifs(); return false;"
+               style="font-size:12px;color:#ef4444;text-decoration:none;font-weight:600;">
+                <i class="bi bi-trash3 me-1"></i>I-clear lahat
             </a>
         </div>
     </div>
@@ -124,6 +124,7 @@
 (function() {
     var pollingInterval = null;
     var isOpen = false;
+    var csrfToken = '<?= csrf_token() ?>';
 
     // ── TOGGLE DROPDOWN ──────────────────────────────
     window.toggleNotifDropdown = function() {
@@ -145,12 +146,26 @@
     // ── FETCH NOTIFICATIONS ──────────────────────────
     function fetchNotifications() {
         fetch('/irms/ajax/get_notifications.php')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            updateBadge(data.count);
-            renderNotifications(data.notifications);
+        .then(function(r) {
+            if (!r.ok) {
+                console.error('[NotifBell] HTTP error:', r.status, r.statusText);
+                return null;
+            }
+            return r.text();
         })
-        .catch(function() {});
+        .then(function(text) {
+            if (!text) return;
+            try {
+                var data = JSON.parse(text);
+                updateBadge(data.count);
+                renderNotifications(data.notifications);
+            } catch (e) {
+                console.error('[NotifBell] Invalid JSON response:', text.substring(0, 200));
+            }
+        })
+        .catch(function(err) {
+            console.error('[NotifBell] Fetch failed:', err);
+        });
     }
 
     // ── UPDATE BADGE ─────────────────────────────────
@@ -231,23 +246,61 @@
     window.markRead = function(id, el, event) {
         fetch('/irms/ajax/mark_notification_read.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': csrfToken },
             body: 'id=' + id
         })
-        .then(function() { fetchNotifications(); })
-        .catch(function() {});
-        
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            console.log('[NotifBell] markRead response:', data);
+            if (data.success) {
+                fetchNotifications();
+            } else {
+                console.error('[NotifBell] markRead failed:', data.error);
+            }
+        })
+        .catch(function(err) {
+            console.error('[NotifBell] markRead error:', err);
+        });
     };
 
     // ── MARK ALL AS READ ──────────────────────────────
     window.markAllRead = function() {
         fetch('/irms/ajax/mark_notification_read.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=0' // 0 = mark all
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': csrfToken },
+            body: 'id=0&action=read'
         })
-        .then(function() { fetchNotifications(); })
-        .catch(function() {});
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                fetchNotifications();
+            } else {
+                console.error('[NotifBell] markAllRead failed:', data.error);
+            }
+        })
+        .catch(function(err) {
+            console.error('[NotifBell] markAllRead error:', err);
+        });
+    };
+
+    // ── CLEAR ALL NOTIFICATIONS (DELETE) ──────────────
+    window.clearAllNotifs = function() {
+        fetch('/irms/ajax/mark_notification_read.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-TOKEN': csrfToken },
+            body: 'action=clear'
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                fetchNotifications();
+            } else {
+                console.error('[NotifBell] clearAll failed:', data.error);
+            }
+        })
+        .catch(function(err) {
+            console.error('[NotifBell] clearAll error:', err);
+        });
     };
 
     // ── ESCAPE HTML ───────────────────────────────────

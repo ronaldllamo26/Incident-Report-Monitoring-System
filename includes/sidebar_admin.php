@@ -1,60 +1,68 @@
 <?php
-// Kunin ang current page para ma-highlight ang active link
 $currentPage = basename($_SERVER['PHP_SELF']);
+$userName = htmlspecialchars($user['name'] ?? $_SESSION['name'] ?? 'Admin');
+$userInitial = strtoupper(substr(strip_tags($userName), 0, 1));
 ?>
 <!-- Sidebar Overlay -->
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-<div class="sidebar d-flex flex-column py-3" id="sidebar">
-    <div class="px-4 mb-4 d-flex justify-content-between align-items-center">
-        <div>
-            <div class="text-white fw-semibold fs-6">
-                <i class="bi bi-shield-check me-2"></i>IRMS
+<div class="sidebar" id="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand">
+        <div class="d-flex align-items-center gap-10" style="gap:10px;">
+            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC"
+                 style="width:30px;height:30px;object-fit:contain;flex-shrink:0;">
+            <div>
+                <div class="sidebar-brand-name">QC-ALERTO</div>
+                <div class="sidebar-brand-role">Admin Panel</div>
             </div>
-            <div class="text-secondary" style="font-size:11px;">Admin Panel</div>
+            <!-- Close btn — mobile only -->
+            <button class="btn btn-sm d-md-none ms-auto"
+                    style="color:#94a3b8;background:none;border:none;padding:2px 4px;"
+                    onclick="toggleSidebar()">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
-        <!-- Close button — mobile only -->
-        <button class="btn btn-sm d-md-none"
-                style="color:#94a3b8;background:none;border:none;"
-                onclick="toggleSidebar()">
-            <i class="bi bi-x-lg"></i>
-        </button>
     </div>
-    <nav class="flex-column nav">
+
+    <!-- Nav -->
+    <nav class="flex-column nav px-1 mt-1" style="flex:1;">
         <a href="/irms/portal/admin/dashboard.php"
            class="nav-link <?= $currentPage === 'dashboard.php' ? 'active' : '' ?>">
-            <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            <i class="bi bi-speedometer2"></i> Dashboard
         </a>
         <a href="/irms/portal/admin/incidents.php"
            class="nav-link <?= $currentPage === 'incidents.php' ? 'active' : '' ?>">
-            <i class="bi bi-exclamation-triangle me-2"></i> Incidents
+            <i class="bi bi-exclamation-triangle"></i> Incidents
         </a>
         <a href="/irms/portal/admin/users.php"
            class="nav-link <?= $currentPage === 'users.php' ? 'active' : '' ?>">
-            <i class="bi bi-people me-2"></i> Users
+            <i class="bi bi-people"></i> Users
         </a>
         <a href="/irms/portal/admin/categories.php"
            class="nav-link <?= $currentPage === 'categories.php' ? 'active' : '' ?>">
-            <i class="bi bi-tags me-2"></i> Categories
+            <i class="bi bi-tags"></i> Categories
         </a>
         <a href="/irms/portal/admin/reports.php"
            class="nav-link <?= $currentPage === 'reports.php' ? 'active' : '' ?>">
-            <i class="bi bi-file-earmark-bar-graph me-2"></i> Reports
+            <i class="bi bi-bar-chart-line"></i> Reports
         </a>
-        <!-- ── DAGDAG: Audit Logs ── -->
         <a href="/irms/portal/admin/audit_logs.php"
            class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>">
-            <i class="bi bi-journal-text me-2"></i> Audit Logs
+            <i class="bi bi-journal-text"></i> Audit Logs
         </a>
     </nav>
-    <div class="mt-auto px-3">
-        <div class="text-secondary small px-2 mb-2">
-            <i class="bi bi-person-circle me-1"></i>
-            <?= htmlspecialchars($user['name'] ?? $_SESSION['name']) ?>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="sidebar-user-av"><?= $userInitial ?></div>
+            <div class="sidebar-user-name"><?= $userName ?></div>
         </div>
-        <a href="/irms/controllers/AuthController.php?action=logout"
-           class="nav-link text-danger">
-            <i class="bi bi-box-arrow-right me-2"></i> Logout
+        <a href="/irms/controllers/AuthController.php?action=logout" class="sidebar-logout">
+            <i class="bi bi-box-arrow-right"></i> Logout
         </a>
     </div>
+
 </div>

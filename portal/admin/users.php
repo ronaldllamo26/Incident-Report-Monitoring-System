@@ -8,6 +8,7 @@ $success = $_GET['success'] ?? '';
 $error   = $_GET['error']   ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    validate_csrf();
     $action = $_POST['action'] ?? '';
     if ($action === 'add') {
         $name=$trim=$_POST['name']??''; $name=trim($name);
@@ -103,6 +104,7 @@ $users=$pdo->query("SELECT u.*,(SELECT COUNT(*) FROM incidents WHERE reporter_id
                                     </td>
                                     <td>
                                         <form action="" method="POST" class="d-flex gap-1 align-items-center">
+                        <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="change_role">
                                             <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
                                             <select name="role" class="form-select form-select-sm" style="width:110px;font-size:12px;" onchange="this.form.submit()">
@@ -118,6 +120,7 @@ $users=$pdo->query("SELECT u.*,(SELECT COUNT(*) FROM incidents WHERE reporter_id
                                     <td>
                                         <?php if ($u['id']!=$_SESSION['user_id']): ?>
                                         <form action="" method="POST" class="d-inline">
+                        <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="toggle">
                                             <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-<?= $u['is_active']?'danger':'success' ?>"
@@ -145,6 +148,7 @@ $users=$pdo->query("SELECT u.*,(SELECT COUNT(*) FROM incidents WHERE reporter_id
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <form action="" method="POST">
+                        <?= csrf_field() ?>
             <input type="hidden" name="action" value="add">
             <div class="modal-body">
                 <div class="mb-3"><label class="form-label small fw-medium">Full Name <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" required></div>

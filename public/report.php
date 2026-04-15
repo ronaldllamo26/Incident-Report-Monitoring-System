@@ -30,8 +30,8 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
     <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
     <style>
         body { background: #f1f5f9; }
-        .brand-bar { background: #002D7A; border-bottom: 3px solid #F5A623; padding: 14px 0; }
-        #map { height: 360px; border-radius: 8px; border: 2px solid #003DA5; z-index: 0; background: #ffffff; }
+        .brand-bar { background: #1e293b; border-bottom: 3px solid #F5A623; padding: 14px 0; }
+        #map { height: 360px; border-radius: 8px; border: 2px solid #111827; z-index: 0; background: #ffffff; }
         @media (max-width: 768px) { #map { height: 280px; } }
         .map-instruction { font-size: 12px; color: #6c757d; margin-top: 6px; }
         .preview-img { width:80px; height:80px; object-fit:cover; border-radius:6px; border:1px solid #dee2e6; }
@@ -60,10 +60,10 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
             display:flex; align-items:center; gap:6px;
         }
         .glass-btn:hover { background:#fff; transform:translateY(-1px); }
-        .glass-btn.active { background:#003DA5; color:#fff; }
+        .glass-btn.active { background:#111827; color:#fff; }
         #map-wrapper {
             position:relative; border-radius:10px; overflow:hidden;
-            border:2px solid #003DA5; box-shadow:0 4px 16px rgba(0,61,165,0.15);
+            border:2px solid #111827; box-shadow:0 4px 16px rgba(0,61,165,0.15);
         }
         #qc-badge {
             position:absolute; top:10px; left:50%; transform:translateX(-50%);
@@ -125,10 +125,10 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 
             <!-- QC notice -->
             <div class="alert d-flex gap-2 py-2 mb-4"
-                 style="background:#EBF1FF;border:1px solid #003DA5;border-left:4px solid #003DA5;">
-                <i class="bi bi-geo-alt-fill flex-shrink-0 mt-1" style="color:#003DA5;"></i>
+                 style="background:#EBF1FF;border:1px solid #111827;border-left:4px solid #111827;">
+                <i class="bi bi-geo-alt-fill flex-shrink-0 mt-1" style="color:#111827;"></i>
                 <div class="small">
-                    <strong style="color:#003DA5;">Para sa mga insidente sa loob ng Quezon City lamang.</strong>
+                    <strong style="color:#111827;">Para sa mga insidente sa loob ng Quezon City lamang.</strong>
                     Hindi kailangan ng account para mag-report.
                 </div>
             </div>
@@ -196,7 +196,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="/irms/public/track.php?tracking=<?= urlencode($dupTracking) ?>"
-                       class="btn btn-sm" style="background:#003DA5;color:#fff;font-weight:600;">
+                       class="btn btn-sm" style="background:#111827;color:#fff;font-weight:600;">
                         <i class="bi bi-search me-1"></i> I-track ang Existing Report
                     </a>
                     <button type="button" class="btn btn-sm btn-outline-secondary fw-medium"
@@ -211,6 +211,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                 <div class="card-body p-4">
                     <form action="/irms/controllers/AnonReportController.php"
                           method="POST" enctype="multipart/form-data" id="report-form">
+                        <?= csrf_field() ?>
 
                         <!-- Reporter info -->
                         <div class="mb-4 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
@@ -328,7 +329,7 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                         <div class="mb-3">
                             <label class="form-label small fw-medium d-flex align-items-center gap-2 mb-2">
                                 I-pin ang Eksaktong Lokasyon
-                                <span class="badge" style="background:#003DA5;color:#F5A623;font-size:10px;font-weight:700;">
+                                <span class="badge" style="background:#111827;color:#F5A623;font-size:10px;font-weight:700;">
                                     QUEZON CITY ONLY
                                 </span>
                             </label>
@@ -584,7 +585,10 @@ function checkDuplicate() {
     dupCheckTimer = setTimeout(function() {
         fetch('/irms/ajax/check_duplicate.php', {
             method:'POST',
-            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            headers:{
+                'Content-Type':'application/x-www-form-urlencoded',
+                'X-CSRF-TOKEN': document.querySelector('[name="csrf_token"]').value
+            },
             body:'lat='+lat+'&lng='+lng+'&category='+cat
         })
         .then(function(r){return r.json();})
