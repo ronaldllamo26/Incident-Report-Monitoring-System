@@ -414,15 +414,41 @@ if ($curSt === 'closed') {
     <?php endif; ?>
 
     <!-- ── Evidences (Attachments) ─────────────────────────── -->
-    <?php if ($attachments): ?>
+    <?php
+    $citizenEv = array_filter($attachments, fn($a) => ($a['stage'] ?? 'report') === 'report');
+    $resProof  = array_filter($attachments, fn($a) => ($a['stage'] ?? 'report') === 'resolution');
+    ?>
+
+    <?php if ($citizenEv): ?>
     <div class="card-c">
-        <div class="card-h">
-            <i class="bi bi-folder2-open"></i> Mga Ebidensya
-            <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px;">(<?= count($attachments) ?>)</span>
-        </div>
+        <div class="card-h"><i class="bi bi-person-fill"></i> Inyong mga Ebidensya</div>
         <div class="card-b">
             <div class="d-flex flex-wrap gap-3 align-items-start">
-                <?php foreach ($attachments as $a): ?>
+                <?php foreach ($citizenEv as $a): ?>
+                    <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
+                        <div style="max-width: 250px; flex: 1 1 200px;">
+                            <video controls class="rounded border shadow-sm" style="width: 100%; max-height: 200px; background: #000;">
+                                <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
+                                Hindi compatible ang video sa browser mo.
+                            </video>
+                        </div>
+                    <?php else: ?>
+                        <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
+                            <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="photo-thumb shadow-sm" alt="photo">
+                        </a>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($resProof): ?>
+    <div class="card-c" style="border-left:4px solid var(--slate);">
+        <div class="card-h"><i class="bi bi-shield-check"></i> Proof of Resolution (mula sa Responder)</div>
+        <div class="card-b">
+            <div class="d-flex flex-wrap gap-3 align-items-start">
+                <?php foreach ($resProof as $a): ?>
                     <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
                         <div style="max-width: 250px; flex: 1 1 200px;">
                             <video controls class="rounded border shadow-sm" style="width: 100%; max-height: 200px; background: #000;">

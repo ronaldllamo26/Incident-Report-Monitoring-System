@@ -1,0 +1,7 @@
+<?php
+// QC-ALERTO AI Configuration
+// Visit https://aistudio.google.com/ for Gemini (Secondary Fallback)
+// Visit https://console.groq.com/ for Groq (Primary High-Speed)
+
+define('GEMINI_API_KEY', 'YOUR_GEMINI_API_KEY_HERE');
+define('GROQ_API_KEY', 'YOUR_GROQ_API_KEY_HERE');

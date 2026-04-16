@@ -12,7 +12,13 @@ if (!empty($_GET['status']))      $filters['status']      = $_GET['status'];
 if (!empty($_GET['category_id'])) $filters['category_id'] = $_GET['category_id'];
 if (!empty($_GET['severity']))    $filters['severity']    = $_GET['severity'];
 
-$incidents  = $model->getAll($filters);
+$perPage    = 20;
+$page       = max(1, (int)($_GET['page'] ?? 1));
+$offset     = ($page - 1) * $perPage;
+
+$total      = $model->countTotal($filters);
+$totalPages = ceil($total / $perPage);
+$incidents  = $model->getAll($filters, $perPage, $offset);
 $categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 $responders = $pdo->query("SELECT id, name FROM users WHERE role = 'responder' ORDER BY name ASC")->fetchAll();
 
@@ -46,7 +52,9 @@ $error   = $_GET['error']   ?? '';
             </div>
             <div class="d-flex align-items-center gap-2">
                 <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
-                <span class="text-muted small"><?= count($incidents) ?> records</span>
+                <span class="text-muted small">
+                    Showing <?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $total)) ?> of <?= number_format($total) ?>
+                </span>
             </div>
         </div>
         <div class="p-4">
@@ -119,6 +127,11 @@ $error   = $_GET['error']   ?? '';
                                     <td class="ps-3 text-muted small"><?= $inc['id'] ?></td>
                                     <td>
                                         <div class="small fw-medium"><?= htmlspecialchars($inc['title']) ?></div>
+                                        <?php if (!empty($inc['ai_summary'])): ?>
+                                            <div class="text-muted" style="font-size:11px; font-style: italic;">
+                                                <i class="bi bi-stars" style="color: #6366f1;"></i> <?= htmlspecialchars($inc['ai_summary']) ?>
+                                            </div>
+                                        <?php endif; ?>
                                         <div class="text-muted" style="font-size:11px;"><?= htmlspecialchars($inc['reporter_name']) ?></div>
                                     </td>
                                     <td><span class="badge bg-light text-dark border small"><?= htmlspecialchars($inc['category_name']) ?></span></td>
@@ -147,6 +160,40 @@ $error   = $_GET['error']   ?? '';
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Pagination -->
+                    <?php if ($totalPages > 1): ?>
+                    <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top">
+                        <div class="text-muted small">
+                            Page <?= $page ?> of <?= $totalPages ?>
+                        </div>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>">
+                                        <i class="bi bi-chevron-left"></i>
+                                    </a>
+                                </li>
+                                <?php
+                                $start = max(1, $page - 2);
+                                $end   = min($totalPages, $page + 2);
+                                for ($p = $start; $p <= $end; $p++):
+                                ?>
+                                <li class="page-item <?= $p === $page ? 'active' : '' ?>">
+                                    <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>">
+                                        <?= $p ?>
+                                    </a>
+                                </li>
+                                <?php endfor; ?>
+                                <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                    <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>

@@ -181,6 +181,14 @@ $error   = $_GET['error']   ?? '';
                        font-size: 15px; font-weight: 700; color: var(--qc-blue); }
         .reporter-name { font-size: 14px; font-weight: 600; }
         .reporter-detail { font-size: 12px; color: var(--muted); }
+
+        /* Resolution upload */
+        .res-upload-box { border: 2px dashed var(--border); border-radius: 8px; padding: 15px;
+                          text-align: center; background: #f8fafc; transition: all 0.2s; cursor: pointer; }
+        .res-upload-box:hover { border-color: var(--qc-blue); background: #f1f5f9; }
+        .res-upload-box i { font-size: 24px; color: var(--muted); display: block; margin-bottom: 5px; }
+        .res-upload-box span { font-size: 12px; color: var(--muted); font-weight: 500; }
+        .res-upload-box input { display: none; }
     </style>
 </head>
 <body>
@@ -380,8 +388,8 @@ $error   = $_GET['error']   ?? '';
                         <i class="bi bi-info-circle me-1"></i>
                         In Progress — i-resolve kapag naalagaan na ang insidente.
                     </div>
-                    <form action="/irms/ajax/update_status.php" method="POST"
-                          onsubmit="return confirm('I-resolve na ang incident?')">
+                    <form action="/irms/ajax/update_status.php" method="POST" enctype="multipart/form-data"
+                          onsubmit="return confirm('I-resolve na ang incident? Sinisiguro mo bang may kalakip na Proof of Resolution?')">
                         <?= csrf_field() ?>
                         <input type="hidden" name="incident_id" value="<?= $id ?>">
                         <input type="hidden" name="action"      value="update_status">
@@ -389,6 +397,16 @@ $error   = $_GET['error']   ?? '';
                         <input type="hidden" name="new_status"  value="resolved">
                         <textarea name="remarks" class="textarea-c mb-3" rows="3" required
                                   placeholder="Findings at aksyon na ginawa... (required)"></textarea>
+
+                        <div class="mb-3">
+                            <label class="info-label mb-2 d-block">Proof of Resolution (Required)</label>
+                            <label class="res-upload-box d-block" id="upload-trigger">
+                                <i class="bi bi-camera shadow-sm-hover"></i>
+                                <span id="file-label">I-upload ang Photo/Video (Proof)</span>
+                                <input type="file" name="evidence[]" id="res-files" multiple required accept="image/*,video/mp4,video/webm">
+                            </label>
+                            <div id="file-list" class="mt-2 small text-muted px-1" style="font-size:11px;"></div>
+                        </div>
                         <button type="submit" class="btn-resolve">
                             <i class="bi bi-check-circle"></i> I-Resolve ang Incident
                         </button>
@@ -481,5 +499,25 @@ L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>])
 </script>
 <?php endif; ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+if (document.getElementById('res-files')) {
+    document.getElementById('res-files').addEventListener('change', function(e) {
+        const label = document.getElementById('file-label');
+        const list = document.getElementById('file-list');
+        if (this.files.length > 0) {
+            label.innerText = this.files.length + ' file(s) selected';
+            label.style.color = 'var(--qc-blue)';
+            let files = [];
+            for(let i=0; i<this.files.length; i++) {
+                files.push('<i class="bi bi-paperclip me-1"></i>' + this.files[i].name);
+            }
+            list.innerHTML = files.join('<br>');
+        } else {
+            label.innerText = 'I-upload ang Photo/Video (Proof)';
+            list.innerHTML = '';
+        }
+    });
+}
+</script>
 </body>
 </html>

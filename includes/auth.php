@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/Firewall.php';
+Firewall::protect();
+header("X-Firewall: Iron-Dome-Active");
+
 if (session_status() === PHP_SESSION_NONE) {
     // ── SECURE SESSION COOKIE FLAGS ───────────────────────────
     // Must be set BEFORE session_start() to take effect.

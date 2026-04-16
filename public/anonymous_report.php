@@ -96,6 +96,14 @@ $error = $_GET['error'] ?? '';
             white-space: nowrap;
             pointer-events: none;
         }
+
+        /* Iron Dome Honeypot styling */
+        .hp-field {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute;
+            left: -9999px;
+        }
     </style>
 </head>
 <body>
@@ -155,6 +163,11 @@ $error = $_GET['error'] ?? '';
                     <form action="/irms/controllers/AnonReportController.php"
                           method="POST" enctype="multipart/form-data" id="report-form">
                         <?= csrf_field() ?>
+
+                        <!-- Iron Dome Honeypot (DO NOT FILL) -->
+                        <div class="hp-field">
+                            <input type="text" name="website_url" autocomplete="off" tabindex="-1">
+                        </div>
 
                         <!-- Reporter info (optional) -->
                         <div class="mb-4 p-3 bg-light rounded">

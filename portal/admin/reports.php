@@ -3,28 +3,42 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireRole('admin');
 require_once __DIR__ . '/../../config/db.php';
 
-$user = currentUser();
+require_once __DIR__ . '/../../models/Incident.php';
+
+$user  = currentUser();
+$model = new Incident();
+
 $dateFrom  = $_GET['date_from']   ?? date('Y-m-01');
 $dateTo    = $_GET['date_to']     ?? date('Y-m-d');
 $statusF   = $_GET['status']      ?? '';
 $categoryF = $_GET['category_id'] ?? '';
 $severityF = $_GET['severity']    ?? '';
 
-$where  = ["i.reported_at BETWEEN ? AND ?"];
-$params = [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'];
-if ($statusF)   { $where[] = 'i.status = ?';      $params[] = $statusF; }
-if ($categoryF) { $where[] = 'i.category_id = ?'; $params[] = $categoryF; }
-if ($severityF) { $where[] = 'i.severity = ?';    $params[] = $severityF; }
+$filters = [
+    'date_from'   => $dateFrom,
+    'date_to'     => $dateTo,
+    'status'      => $statusF,
+    'category_id' => $categoryF,
+    'severity'    => $severityF
+];
 
-$sql = "SELECT i.*, c.name AS category_name, COALESCE(u.name, i.anon_name, 'Anonymous') AS reporter_name, a.name AS responder_name
-    FROM incidents i JOIN categories c ON i.category_id = c.id
-    LEFT JOIN users u ON i.reporter_id = u.id LEFT JOIN users a ON i.assigned_to = a.id
-    WHERE " . implode(' AND ', $where) . " ORDER BY i.reported_at DESC";
-$stmt = $pdo->prepare($sql); $stmt->execute($params);
-$incidents = $stmt->fetchAll();
+$perPage    = 20;
+$page       = max(1, (int)($_GET['page'] ?? 1));
+$offset     = ($page - 1) * $perPage;
+
+// For statistics, we need the full unfiltered-by-page list
+$allFilteredIncidents = $model->getAll($filters);
+$totalCount = count($allFilteredIncidents);
+
+// For the table, we need the paginated list
+$incidents = $model->getAll($filters, $perPage, $offset);
+$totalPages = ceil($totalCount / $perPage);
 
 $counts = ['pending'=>0,'in_progress'=>0,'resolved'=>0,'closed'=>0];
-foreach ($incidents as $i) { if (isset($counts[$i['status']])) $counts[$i['status']]++; }
+foreach ($allFilteredIncidents as $i) { 
+    if (isset($counts[$i['status']])) $counts[$i['status']]++; 
+}
+
 $categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 $statusColor = ['pending'=>'warning','in_progress'=>'primary','resolved'=>'success','closed'=>'secondary'];
 $sevColor    = ['low'=>'success','medium'=>'warning','high'=>'danger','critical'=>'dark'];
@@ -85,14 +99,17 @@ $sevColor    = ['low'=>'success','medium'=>'warning','high'=>'danger','critical'
             </div></div>
 
             <div class="row g-3 mb-4">
-                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold"><?= count($incidents) ?></div><div class="small text-muted">Total</div></div></div>
-                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-warning"><?= $counts['pending'] ?></div><div class="small text-muted">Pending</div></div></div>
-                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-slate"><?= $counts['in_progress'] ?></div><div class="small text-muted">In Progress</div></div></div>
-                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-success"><?= $counts['resolved'] ?></div><div class="small text-muted">Resolved</div></div></div>
+                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold"><?= number_format($totalCount) ?></div><div class="small text-muted">Total</div></div></div>
+                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-warning"><?= number_format($counts['pending']) ?></div><div class="small text-muted">Pending</div></div></div>
+                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-primary"><?= number_format($counts['in_progress']) ?></div><div class="small text-muted">In Progress</div></div></div>
+                <div class="col-6 col-md-3"><div class="card border-0 shadow-sm text-center py-3"><div class="fs-4 fw-bold text-success"><?= number_format($counts['resolved']) ?></div><div class="small text-muted">Resolved</div></div></div>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <p class="small fw-medium mb-0">Showing <strong><?= count($incidents) ?></strong> incidents <span class="text-muted">(<?= date('M d, Y',strtotime($dateFrom)) ?> — <?= date('M d, Y',strtotime($dateTo)) ?>)</span></p>
+                <p class="small fw-medium mb-0">
+                    Showing <strong><?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $totalCount)) ?></strong> of <?= number_format($totalCount) ?> incidents
+                    <span class="text-muted">(<?= date('M d, Y',strtotime($dateFrom)) ?> — <?= date('M d, Y',strtotime($dateTo)) ?>)</span>
+                </p>
             </div>
 
             <div class="card border-0 shadow-sm"><div class="card-body p-0">
@@ -122,6 +139,40 @@ $sevColor    = ['low'=>'success','medium'=>'warning','high'=>'danger','critical'
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                <?php if ($totalPages > 1): ?>
+                <div class="d-flex justify-content-between align-items-center px-3 py-3 border-top">
+                    <div class="text-muted small">
+                        Page <?= $page ?> of <?= $totalPages ?>
+                    </div>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                                <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            <?php
+                            $start = max(1, $page - 2);
+                            $end   = min($totalPages, $page + 2);
+                            for ($p = $start; $p <= $end; $p++):
+                            ?>
+                            <li class="page-item <?= $p === $page ? 'active' : '' ?>">
+                                <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>">
+                                    <?= $p ?>
+                                </a>
+                            </li>
+                            <?php endfor; ?>
+                            <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                                <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                <?php endif; ?>
                 <?php endif; ?>
             </div></div>
         </div>

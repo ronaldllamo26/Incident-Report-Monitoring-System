@@ -12,18 +12,16 @@ $total      = array_sum($counts);
 $recent     = $model->getAll();
 $recent     = array_slice($recent, 0, 10);
 
+$kpis       = $model->getGlobalKPIs();
+$trend      = $model->getTrendData(30);
+$sevDist    = $model->getSeverityDist();
+
 $catStats = $pdo->query("
     SELECT c.name, COUNT(i.id) AS count
     FROM categories c
     LEFT JOIN incidents i ON i.category_id = c.id
     GROUP BY c.id, c.name
     ORDER BY count DESC
-")->fetchAll();
-
-$sevStats = $pdo->query("
-    SELECT severity, COUNT(*) AS count
-    FROM incidents
-    GROUP BY severity
 ")->fetchAll();
 
 $statusColor = [
@@ -129,54 +127,108 @@ $sevColor = [
             <?php endif; ?>
 
             <div class="row g-3 mb-4">
-                <div class="col-6 col-xl-3">
-                    <div class="card border-0 shadow-sm">
+            <!-- ── Top KPI Cards ──────────────────────────────── -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 shadow-sm border-start border-primary border-3">
                         <div class="card-body py-3">
-                            <div class="text-muted small mb-1">Total Incidents</div>
-                            <div class="fs-3 fw-bold"><?= $total ?></div>
+                            <div class="text-muted small mb-1">Total Reports</div>
+                            <div class="fs-4 fw-bold"><?= $total ?></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-xl-3">
-                    <div class="card border-0 shadow-sm">
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 shadow-sm border-start border-warning border-3">
                         <div class="card-body py-3">
-                            <div class="text-muted small mb-1">Pending</div>
-                            <div class="fs-3 fw-bold text-warning"><?= $counts['pending'] ?></div>
+                            <div class="text-muted small mb-1">Action Needed</div>
+                            <div class="fs-4 fw-bold text-warning"><?= $counts['pending'] ?></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-xl-3">
-                    <div class="card border-0 shadow-sm">
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 shadow-sm border-start border-info border-3">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">In Progress</div>
-                            <div class="fs-3 fw-bold text-slate"><?= $counts['in_progress'] ?></div>
+                            <div class="fs-4 fw-bold text-info"><?= $counts['in_progress'] ?></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-6 col-xl-3">
-                    <div class="card border-0 shadow-sm">
+                <!-- Standard KPIs -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 shadow-sm border-start border-success border-3">
                         <div class="card-body py-3">
-                            <div class="text-muted small mb-1">Resolved</div>
-                            <div class="fs-3 fw-bold text-success"><?= $counts['resolved'] ?></div>
+                            <div class="text-muted small mb-1">SLA Success</div>
+                            <div class="fs-4 fw-bold text-success"><?= $kpis['sla'] ?>%</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 shadow-sm border-start border-dark border-3">
+                        <div class="card-body py-3">
+                            <div class="text-muted small mb-1">Avg Response</div>
+                            <div class="fs-4 fw-bold"><?= $kpis['mtta'] ?> <small class="fw-normal fs-6">mins</small></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Citizen CSAT Score -->
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="card border-0 shadow-sm border-start border-3" style="border-color: #f59e0b !important;">
+                        <div class="card-body py-3">
+                            <div class="text-muted small mb-1">Citizen CSAT</div>
+                            <div class="fs-4 fw-bold" style="color: #f59e0b;">
+                                <?= $kpis['csat'] ?> <i class="bi bi-star-fill fs-6"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- ── Trend Analysis & Status ──────────────────────── -->
             <div class="row g-3 mb-4">
-                <div class="col-md-6">
+                <div class="col-lg-8">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <p class="small fw-medium mb-3">Incidents by Status</p>
-                            <canvas id="statusChart" height="200"></canvas>
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <p class="small fw-medium mb-0">Trend Analysis (Last 30 Days)</p>
+                                <span class="badge bg-light text-dark border">Standard KPI</span>
+                            </div>
+                            <div style="height: 250px;">
+                                <canvas id="trendChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-lg-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <p class="small fw-medium mb-3">Incidents by Category</p>
-                            <canvas id="categoryChart" height="200"></canvas>
+                            <p class="small fw-medium mb-4">Incident Status</p>
+                            <div style="height: 250px;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Categories & Severity ────────────────────────── -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-7">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <p class="small fw-medium mb-3">Volume by Category</p>
+                            <div style="height: 250px;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <p class="small fw-medium mb-3">Severity Breakdown</p>
+                            <div style="height: 250px;">
+                                <canvas id="severityChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -211,7 +263,14 @@ $sevColor = [
                                 <?php foreach ($recent as $inc): ?>
                                 <tr>
                                     <td class="ps-3 text-muted small"><?= $inc['id'] ?></td>
-                                    <td class="small fw-medium"><?= htmlspecialchars($inc['title']) ?></td>
+                                        <td class="small fw-medium">
+                                            <?= htmlspecialchars($inc['title']) ?>
+                                            <?php if (!empty($inc['ai_summary'])): ?>
+                                                <div class="text-muted mt-1" style="font-size: 0.75rem; font-style: italic;">
+                                                    <i class="bi bi-stars" style="color: #6366f1;"></i> <?= htmlspecialchars($inc['ai_summary']) ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
                                     <td><span class="badge bg-light text-dark border small"><?= htmlspecialchars($inc['category_name']) ?></span></td>
                                     <td><span class="badge bg-<?= $sevColor[$inc['severity']] ?> small"><?= ucfirst($inc['severity']) ?></span></td>
                                     <td><span class="badge bg-<?= $statusColor[$inc['status']] ?> small"><?= ucwords(str_replace('_',' ',$inc['status'])) ?></span></td>
@@ -239,30 +298,123 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
 });
 
+// Trend Chart (Line)
+new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+        labels: [<?php foreach($trend as $t) echo '"'.date('M d', strtotime($t['date'])).'",'; ?>],
+        datasets: [{
+            label: 'Incidents per Day',
+            data: [<?php foreach($trend as $t) echo $t['count'].','; ?>],
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+            pointRadius: 3
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { display: false }, ticks: { stepSize: 1 } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// Status Chart (Doughnut)
 new Chart(document.getElementById('statusChart'), {
     type: 'doughnut',
     data: {
         labels: ['Pending', 'In Progress', 'Resolved', 'Closed'],
-        datasets: [{ data: [<?= $counts['pending'] ?>, <?= $counts['in_progress'] ?>, <?= $counts['resolved'] ?>, <?= $counts['closed'] ?>], backgroundColor: ['#f59e0b','#3b82f6','#10b981','#6b7280'], borderWidth: 0 }]
+        datasets: [{
+            data: [<?= $counts['pending'] ?>, <?= $counts['in_progress'] ?>, <?= $counts['resolved'] ?>, <?= $counts['closed'] ?>],
+            backgroundColor: ['#ffc107', '#0d6efd', '#198754', '#6c757d'],
+            borderWidth: 0,
+            hoverOffset: 10
+        }]
     },
-    options: { plugins: { legend: { position: 'bottom' } }, cutout: '65%' }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 11 } } } },
+        cutout: '70%'
+    }
 });
+
+// Category Chart (Bar)
 new Chart(document.getElementById('categoryChart'), {
     type: 'bar',
     data: {
         labels: [<?php foreach($catStats as $c) echo '"'.addslashes($c['name']).'",'; ?>],
-        datasets: [{ label: 'Incidents', data: [<?php foreach($catStats as $c) echo $c['count'].','; ?>], backgroundColor: '#3b82f6', borderRadius: 4, borderWidth: 0 }]
+        datasets: [{
+            label: 'Incidents',
+            data: [<?php foreach($catStats as $c) echo $c['count'].','; ?>],
+            backgroundColor: '#0d6efd',
+            borderRadius: 5,
+            borderWidth: 0
+        }]
     },
-    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { borderDash: [2, 2] }, ticks: { stepSize: 1 } },
+            x: { grid: { display: false } }
+        }
+    }
 });
-var map = L.map('map').setView([14.5995, 120.9842], 7);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+
+// Severity Chart (Pie)
+new Chart(document.getElementById('severityChart'), {
+    type: 'pie',
+    data: {
+        labels: ['Low', 'Medium', 'High', 'Critical'],
+        datasets: [{
+            data: [
+                <?= $sevDist['low'] ?? 0 ?>,
+                <?= $sevDist['medium'] ?? 0 ?>,
+                <?= $sevDist['high'] ?? 0 ?>,
+                <?= $sevDist['critical'] ?? 0 ?>
+            ],
+            backgroundColor: ['#198754', '#ffc107', '#fd7e14', '#dc3545'],
+            borderWidth: 1,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, padding: 15, font: { size: 11 } } }
+        }
+    }
+});
+
+// Map Logic
+var map = L.map('map').setView([14.6760, 121.0437], 12); // Centered on Quezon City
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© CARTO'
+}).addTo(map);
+
 fetch('/irms/ajax/get_incidents_map.php').then(r=>r.json()).then(data=>{
     data.forEach(inc=>{
-        var c = L.circleMarker([inc.lat,inc.lng],{radius:8,fillColor:inc.color,color:'#fff',weight:2,opacity:1,fillOpacity:0.9}).addTo(map);
+        var c = L.circleMarker([inc.lat,inc.lng],{
+            radius: 8,
+            fillColor: inc.color,
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+        }).addTo(map);
         c.bindPopup('<div style="min-width:180px"><strong>'+inc.title+'</strong><br><span style="font-size:11px;color:#666;">'+inc.location+'</span><br><span class="badge" style="background:'+inc.color+';color:#fff;padding:2px 6px;border-radius:4px;margin-top:4px;display:inline-block;">'+inc.status.replace('_',' ')+'</span></div>');
     });
 });
+
 setInterval(function(){
     fetch('/irms/ajax/check_escalations.php').then(r=>r.json()).then(data=>{ if(data.escalated>0) location.reload(); }).catch(()=>{});
 }, 60000);

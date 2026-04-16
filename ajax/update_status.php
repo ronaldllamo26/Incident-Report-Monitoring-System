@@ -57,8 +57,48 @@ if ($action === 'update_status') {
     }
     // ──────────────────────────────────────────────────
 
+    // ── MANDATORY RESOLUTION PROOF ────────────────────
+    if ($newStatus === 'resolved') {
+        if (empty($_FILES['evidence']['name'][0])) {
+            header('Location: ' . $back . '&error=' .
+                   urlencode('Bawal i-resolve nang walang Proof of Resolution (Photo/Video).'));
+            exit;
+        }
+    }
+    // ──────────────────────────────────────────────────
+
     // I-update ang status at mag-log
     $model->updateStatus($id, $newStatus, $user['id'], $oldStatus, $remarks);
+
+    // ── MEDIA UPLOAD FOR RESOLUTION ───────────────────
+    if ($newStatus === 'resolved' && !empty($_FILES['evidence']['name'][0])) {
+        $uploadDir = __DIR__ . '/../uploads/';
+        foreach ($_FILES['evidence']['tmp_name'] as $i => $tmp) {
+            if ($_FILES['evidence']['error'][$i] !== UPLOAD_ERR_OK) continue;
+
+            $check = validateUploadedMedia($tmp, $_FILES['evidence']['name'][$i]);
+            if (!$check['valid']) {
+                // If invalid evidence during resolution, maybe log it but we already required it
+                logAudit($pdo, $user['id'], 'res_upload_rejected', 'incident', $id,
+                    'Resolution file rejected: ' . $_FILES['evidence']['name'][$i] . ' — ' . $check['error']);
+                continue;
+            }
+
+            $filename = uniqid('res_', true) . '.' . $check['ext'];
+            if (move_uploaded_file($tmp, $uploadDir . $filename)) {
+                $pdo->prepare("
+                    INSERT INTO attachments (incident_id, file_name, file_path, file_type, stage)
+                    VALUES (?, ?, ?, ?, 'resolution')
+                ")->execute([
+                    $id,
+                    $_FILES['evidence']['name'][$i],
+                    'uploads/' . $filename,
+                    $check['mime'],
+                ]);
+            }
+        }
+    }
+    // ──────────────────────────────────────────────────
 
     // ── EMAIL NOTIFICATION ─────────────────────────────
     $fullIncident = $model->getById($id);

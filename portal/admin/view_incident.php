@@ -15,8 +15,8 @@ if (!$incident) {
 }
 
 $attachments = $model->getAttachments($id);
-$logs        = $model->getStatusLogs($id);
-$responses   = $model->getResponses($id);
+$timeline    = $model->getFullTimeline($id);
+$feedback    = $model->getFeedback($id);
 $responders = $pdo->query("
     SELECT id, name FROM users
     WHERE role = 'responder'
@@ -49,16 +49,38 @@ $error   = $_GET['error']   ?? '';
     <?php include __DIR__ . '/../../includes/sidebar_style.php'; ?>
     <style>
         #map { height: 220px; border-radius: 8px; border: 1px solid #dee2e6; }
-        .timeline { position: relative; padding-left: 24px; }
-        .timeline::before { content:''; position:absolute; left:7px; top:0; bottom:0;
-                            width:1px; background:#dee2e6; }
-        .tl-item { position:relative; margin-bottom:16px; }
-        .tl-dot { position:absolute; left:-20px; top:4px; width:10px; height:10px;
-                  border-radius:50%; background:#0d6efd; border:2px solid #fff;
-                  box-shadow:0 0 0 1px #0d6efd; }
-        .tl-dot.done { background:#198754; box-shadow:0 0 0 1px #198754; }
-        .chat-bubble { background:#f8f9fa; border-radius:0 12px 12px 12px;
-                       padding:10px 14px; border:0.5px solid #dee2e6; }
+        
+        /* Professional Lifecycle Timeline */
+        .lifecycle-container { position: relative; padding: 10px 0; }
+        .lifecycle-container::before { 
+            content: ''; position: absolute; left: 15px; top: 0; bottom: 0; 
+            width: 2px; background: #e2e8f0; 
+        }
+        .event-item { position: relative; padding-left: 45px; margin-bottom: 24px; }
+        .event-item:last-child { margin-bottom: 0; }
+        .event-icon { 
+            position: absolute; left: 0; top: 0; width: 32px; height: 32px; 
+            border-radius: 50%; background: #fff; border: 2px solid #cbd5e1; 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 1; font-size: 14px; color: #64748b;
+            box-shadow: 0 0 0 4px #fff;
+        }
+        .event-card { 
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; 
+            padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            position: relative;
+        }
+        .event-card::before {
+            content: ''; position: absolute; left: -6px; top: 12px;
+            width: 10px; height: 10px; background: #fff;
+            border-left: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+            transform: rotate(45deg);
+        }
+        .event-meta { font-size: 11px; color: #94a3b8; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .event-title { font-size: 13px; fw-bold; margin-bottom: 2px; color: #1e293b; font-weight: 600; }
+        .event-content { font-size: 13px; color: #475569; line-height: 1.5; }
+        .event-actor { color: #0f172a; font-weight: 600; }
+
         .attach-img { width:80px; height:80px; object-fit:cover;
                       border-radius:8px; border:1px solid #dee2e6; cursor:pointer; }
     </style>
@@ -115,78 +137,140 @@ $error   = $_GET['error']   ?? '';
 
             <div class="row g-4">
 
-                <!-- LEFT -->
-                <div class="col-lg-8">
+                <!-- MAIN INFO COLUMN (KALIWA) -->
+                <div class="col-lg-8 col-xl-9">
 
-                    <div class="card border-0 shadow-sm mb-3">
+                    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                        <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                            <h6 class="fw-bold mb-0 text-slate">Detalyado ng Insidente</h6>
+                            <span class="badge bg-<?= $sevColor[$incident['severity']] ?> px-3">
+                                <?= ucfirst($incident['severity']) ?> Priority
+                            </span>
+                        </div>
                         <div class="card-body p-4">
-                            <h5 class="fw-semibold mb-3">
-                                <?= htmlspecialchars($incident['title']) ?>
-                            </h5>
-                            <div class="d-flex flex-wrap gap-2 mb-3">
-                                <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-tag me-1"></i>
-                                    <?= htmlspecialchars($incident['category_name']) ?>
-                                </span>
-                                <span class="badge bg-<?= $sevColor[$incident['severity']] ?>">
-                                    <?= ucfirst($incident['severity']) ?> severity
-                                </span>
-                                <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-person me-1"></i>
-                                    <?= htmlspecialchars($incident['reporter_name']) ?>
-                                </span>
-                                <span class="badge bg-light text-dark border">
-                                    <i class="bi bi-calendar me-1"></i>
-                                    <?= date('M d, Y g:i A', strtotime($incident['reported_at'])) ?>
-                                </span>
+                            <?php if ($incident['is_duplicate']): ?>
+                                <div class="alert alert-indigo d-flex align-items-center mb-4" style="background-color: #f5f3ff; border: 1px solid #c4b5fd; color: #5b21b6;">
+                                    <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                                    <div class="small fw-medium">
+                                        System Notice: Potential duplicate of 
+                                        <a href="/irms/portal/admin/view_incident.php?id=<?= $incident['duplicate_of'] ?>" class="fw-bold text-decoration-none" style="color: #4c1d95;">
+                                            Incident #<?= $incident['duplicate_of'] ?>
+                                        </a> detected.
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <h4 class="fw-bold text-slate mb-2"><?= htmlspecialchars($incident['title']) ?></h4>
+                            <div class="text-muted small mb-4 d-flex align-items-center gap-3">
+                                <span><i class="bi bi-tag me-1"></i> <?= htmlspecialchars($incident['category_name']) ?></span>
+                                <span><i class="bi bi-calendar3 me-1"></i> <?= date('M d, Y g:i A', strtotime($incident['reported_at'])) ?></span>
                             </div>
-                            <p class="mb-2">
+
+                            <p class="fs-6 text-slate mb-4" style="line-height: 1.7;">
                                 <?= nl2br(htmlspecialchars($incident['description'])) ?>
                             </p>
-                            <div class="text-muted small">
-                                <i class="bi bi-geo-alt me-1"></i>
-                                <?= htmlspecialchars($incident['location']) ?>
+
+                            <div class="p-3 bg-light rounded-3 d-flex align-items-start gap-2">
+                                <i class="bi bi-geo-alt-fill text-danger mt-1"></i>
+                                <div>
+                                    <div class="fw-semibold small text-slate">Lokasyon:</div>
+                                    <div class="text-muted small"><?= htmlspecialchars($incident['location']) ?></div>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <?php if ($incident['ai_formal_report']): ?>
+                    <!-- AI Official Formal Report -->
+                    <div class="card border-0 shadow-sm mb-3 border-start border-4" style="border-color: #1e3a8a !important;">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold mb-0 text-primary">
+                                    <i class="bi bi-file-earmark-text-fill me-2"></i>Official AI Incident Disclosure (English)
+                                </h6>
+                                <button class="btn btn-outline-primary btn-sm" onclick="copyOfficialReport()">
+                                    <i class="bi bi-clipboard me-1"></i> Copy Report
+                                </button>
+                            </div>
+                            <div class="bg-light p-3 rounded" style="font-family: 'Courier New', Courier, monospace; font-size: 13px; border: 1px solid #d1d5db;">
+                                <div id="formalReportText" style="white-space: pre-wrap; line-height: 1.6; color: #1e293b;"><?= htmlspecialchars($incident['ai_formal_report']) ?></div>
+                            </div>
+                            <div class="mt-2 text-muted" style="font-size: 10px;">
+                                <i class="bi bi-info-circle me-1"></i> This report is automatically generated using formal government nomenclature for official documentation purposes.
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                    function copyOfficialReport() {
+                        const text = document.getElementById('formalReportText').innerText;
+                        navigator.clipboard.writeText(text).then(() => {
+                            const btn = event.currentTarget;
+                            const original = btn.innerHTML;
+                            btn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+                            btn.classList.replace('btn-outline-primary', 'btn-success');
+                            setTimeout(() => {
+                                btn.innerHTML = original;
+                                btn.classList.replace('btn-success', 'btn-outline-primary');
+                            }, 2000);
+                        });
+                    }
+                    </script>
+                    <?php endif; ?>
 
-                    <?php if ($incident['latitude'] && $incident['longitude']): ?>
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-2">
-                                <i class="bi bi-map me-1"></i> Lokasyon
-                            </p>
-                            <div id="map"></div>
+                    <!-- Media Evidence -->
+                    <?php
+                    $citizenEv = array_filter($attachments, fn($a) => ($a['stage'] ?? 'report') === 'report');
+                    $resProof  = array_filter($attachments, fn($a) => ($a['stage'] ?? 'report') === 'resolution');
+                    ?>
+
+                    <?php if ($citizenEv || $resProof): ?>
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h6 class="fw-bold mb-0 text-slate"><i class="bi bi-images me-2 text-primary"></i>Mga Ebidensya at Patunay</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <?php if ($citizenEv): ?>
+                                <p class="small fw-bold text-muted text-uppercase mb-3" style="letter-spacing: 0.5px;">Mula sa Citizen</p>
+                                <div class="d-flex flex-wrap gap-3 mb-4">
+                                    <?php foreach ($citizenEv as $a): ?>
+                                        <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
+                                            <div style="max-width: 250px;">
+                                                <video controls class="rounded border shadow-sm w-100" style="max-height: 150px; background: #000;">
+                                                    <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
+                                                </video>
+                                            </div>
+                                        <?php else: ?>
+                                            <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
+                                                <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="attach-img shadow-sm" style="width:100px; height:100px; border-radius:12px;" alt="attachment">
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if ($resProof): ?>
+                                <hr class="my-4">
+                                <p class="small fw-bold text-success text-uppercase mb-3" style="letter-spacing: 0.5px;">Proof of Resolution (Responder)</p>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <?php foreach ($resProof as $a): ?>
+                                        <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
+                                            <div style="max-width: 250px;">
+                                                <video controls class="rounded border shadow-sm w-100" style="max-height: 150px; background: #000;">
+                                                    <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
+                                                </video>
+                                            </div>
+                                        <?php else: ?>
+                                            <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
+                                                <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="attach-img shadow-sm border-success border-2" style="width:100px; height:100px; border-radius:12px;" alt="attachment">
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <?php endif; ?>
 
-                    <?php if ($attachments): ?>
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-3">
-                                <i class="bi bi-folder2-open me-1"></i>
-                                Mga Ebidensya (<?= count($attachments) ?>)
-                            </p>
-                            <div class="d-flex flex-wrap gap-3 align-items-start">
-                                <?php foreach ($attachments as $a): ?>
-                                    <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
-                                        <div style="max-width: 250px; flex: 1 1 200px;">
-                                            <video controls class="rounded border shadow-sm" style="width: 100%; max-height: 200px; background: #000;">
-                                                <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
-                                                Hindi compatible ang video sa browser mo.
-                                            </video>
-                                        </div>
-                                    <?php else: ?>
-                                        <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
-                                            <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="attach-img shadow-sm" alt="attachment">
-                                        </a>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body p-3">
@@ -207,211 +291,178 @@ $error   = $_GET['error']   ?? '';
                         </div>
                     </div>
 
-                    <?php if ($responses): ?>
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-3">
-                                <i class="bi bi-chat-left-dots me-1"></i>
-                                Mga Response (<?= count($responses) ?>)
-                            </p>
-                            <div class="d-flex flex-column gap-3">
-                                <?php foreach ($responses as $r): ?>
-                                    <div>
-                                        <div class="d-flex align-items-center gap-2 mb-1">
-                                            <div style="width:28px;height:28px;border-radius:50%;
-                                                 background:#e0f2fe;display:flex;align-items:center;
-                                                 justify-content:center;font-size:12px;
-                                                 font-weight:500;color:#0369a1;">
-                                                <?= strtoupper(substr($r['responder_name'],0,1)) ?>
-                                            </div>
-                                            <span class="small fw-medium">
-                                                <?= htmlspecialchars($r['responder_name']) ?>
-                                            </span>
-                                            <span class="text-muted" style="font-size:11px;">
-                                                <?= date('M d, Y g:i A', strtotime($r['responded_at'])) ?>
-                                            </span>
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom-0">
+                            <h6 class="fw-bold mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Incident Lifecycle Timeline</h6>
+                        </div>
+                        <div class="card-body px-4 pb-4 pt-1">
+                            <div class="lifecycle-container">
+                                <?php foreach (array_reverse($timeline) as $event): ?>
+                                    <div class="event-item">
+                                        <div class="event-icon" style="border-color: <?= $event['color'] ?>; color: <?= $event['color'] ?>;">
+                                            <i class="bi <?= $event['icon'] ?>"></i>
                                         </div>
-                                        <div class="chat-bubble ms-4">
-                                            <p class="small mb-0">
-                                                <?= nl2br(htmlspecialchars($r['message'])) ?>
-                                            </p>
+                                        <div class="event-card">
+                                            <div class="event-meta">
+                                                <span><i class="bi bi-calendar3 me-1"></i> <?= date('M d, Y · g:i A', strtotime($event['date'])) ?></span>
+                                                <span>·</span>
+                                                <span class="event-actor"><?= htmlspecialchars($event['actor']) ?></span>
+                                            </div>
+                                            <div class="event-title"><?= htmlspecialchars($event['title']) ?></div>
+                                            <div class="event-content">
+                                                <?php if ($event['type'] === 'feedback'): ?>
+                                                    <?php 
+                                                    // Extract rating number from content like "Rating: 5/5 Stars..."
+                                                    preg_match('/Rating: (\d)\/5/', $event['content'], $matches);
+                                                    $ratingVal = isset($matches[1]) ? (int)$matches[1] : 0;
+                                                    $commentText = preg_replace('/Rating: \d\/5 Stars\. /', '', $event['content']);
+                                                    ?>
+                                                    <div class="mb-2 d-flex gap-1" style="color: #f59e0b;">
+                                                        <?php for ($i=1; $i<=5; $i++): ?>
+                                                            <i class="bi bi-star<?= $i <= $ratingVal ? '-fill' : '' ?>"></i>
+                                                        <?php endfor; ?>
+                                                    </div>
+                                                    <div class="fst-italic text-muted"><?= htmlspecialchars($commentText) ?></div>
+                                                <?php else: ?>
+                                                    <?= nl2br(htmlspecialchars(str_replace('✨', '', $event['content']))) ?>
+                                                <?php endif; ?>
+                                            </div>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
                         </div>
                     </div>
-                    <?php endif; ?>
 
                 </div>
 
-                <!-- RIGHT -->
-                <div class="col-lg-4">
+                <!-- CONTROLS SIDEBAR (KANAN) -->
+                <div class="col-lg-4 col-xl-3">
 
-                    <!-- Update status -->
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-2">
-                                <i class="bi bi-arrow-repeat me-1"></i> I-update ang Status
-                            </p>
-
-                            <?php if ($incident['status'] === 'resolved'): ?>
-                            <div class="alert alert-success py-2 small mb-2">
-                                <i class="bi bi-check-circle me-1"></i>
-                                Na-resolve na — pwede mo nang i-close.
-                            </div>
-                            <form action="/irms/ajax/update_status.php" method="POST">
-                        <?= csrf_field() ?>
-                                <input type="hidden" name="incident_id" value="<?= $id ?>">
-                                <input type="hidden" name="action" value="update_status">
-                                <input type="hidden" name="old_status" value="resolved">
-                                <input type="hidden" name="new_status" value="closed">
-                                <textarea name="remarks" class="form-control form-control-sm mb-2"
-                                    rows="2" placeholder="Closing remarks (optional)..."></textarea>
-                                <button type="submit" class="btn btn-secondary btn-sm w-100"
-                                        onclick="return confirm('I-close na ang incident?')">
-                                    <i class="bi bi-lock me-1"></i> I-Close ang Incident
-                                </button>
-                            </form>
-
-                            <?php elseif ($incident['status'] !== 'closed'): ?>
-                            <form action="/irms/ajax/update_status.php" method="POST">
-                        <?= csrf_field() ?>
-                                <input type="hidden" name="incident_id" value="<?= $id ?>">
-                                <input type="hidden" name="action" value="update_status">
-                                <input type="hidden" name="old_status" value="<?= $incident['status'] ?>">
-                                <div class="mb-2">
-                                    <select name="new_status" class="form-select form-select-sm" required>
-                                        <option value="">-- Piliin ang bagong status --</option>
-                                        <?php foreach (['pending','in_progress','resolved','closed'] as $s):
-                                            if ($s === $incident['status']) continue; ?>
-                                            <option value="<?= $s ?>">
-                                                <?= ucwords(str_replace('_',' ',$s)) ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="mb-2">
-                                    <textarea name="remarks" class="form-control form-control-sm"
-                                        rows="2" placeholder="Remarks (optional)..."></textarea>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-sm w-100">
-                                    <i class="bi bi-check2 me-1"></i> I-update
-                                </button>
-                            </form>
-
-                            <?php else: ?>
-                            <div class="alert alert-secondary py-2 small mb-0">
-                                <i class="bi bi-lock me-1"></i> Closed na ang incident na ito.
-                            </div>
-                            <?php endif; ?>
-
-                            <?php if (!in_array($incident['status'], ['closed', 'rejected'])): ?>
-                            <hr class="my-3 text-muted">
-                            <p class="small fw-bold mb-2 text-danger" style="font-size: 11px; text-transform: uppercase;">
-                                <i class="bi bi-shield-exclamation me-1"></i> Troll / Spam Moderation
-                            </p>
-                            <form action="/irms/ajax/reject_ban.php" method="POST"
-                                  onsubmit="return confirm('WARNING: Mabubura ang lahat ng attachments, ipapasara ang incident, at iba-BAN ang IP/Account ng nag-submit ng pang-habambuhay. Isa itong permanenteng parusa. Ituloy?');">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="incident_id" value="<?= $id ?>">
-                                <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold pb-2 pt-2">
-                                    <i class="bi bi-hammer me-1"></i> Reject Spam & Ban Poster
-                                </button>
-                            </form>
-                            <?php endif; ?>
+                    <!-- Map Card -->
+                    <?php if ($incident['latitude'] && $incident['longitude']): ?>
+                    <div class="card border-0 shadow-sm mb-4 overflow-hidden">
+                        <div id="map" style="height: 200px;"></div>
+                        <div class="card-body p-2 text-center">
+                            <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i> Incident Proximity View</div>
                         </div>
                     </div>
+                    <?php endif; ?>
 
-                    <!-- Assign responder -->
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-2">
-                                <i class="bi bi-person-badge me-1"></i> Assign Responder
-                            </p>
-                            <form action="/irms/ajax/assign_responder.php" method="POST">
-                        <?= csrf_field() ?>
-                                <input type="hidden" name="incident_id" value="<?= $id ?>">
-                                <div class="mb-2">
-                                    <select name="responder_id" class="form-select form-select-sm">
-                                        <option value="">-- Unassigned --</option>
+                    <!-- Action Center -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white py-3 border-bottom">
+                            <h6 class="fw-bold mb-0 text-slate"><i class="bi bi-tools me-2 text-primary"></i>Action Center</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Update Status -->
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted text-uppercase mb-2 d-block">Incident Status</label>
+                                <?php if ($incident['status'] === 'resolved'): ?>
+                                    <form action="/irms/ajax/update_status.php" method="POST">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="incident_id" value="<?= $id ?>">
+                                        <input type="hidden" name="action" value="update_status">
+                                        <input type="hidden" name="old_status" value="resolved">
+                                        <input type="hidden" name="new_status" value="closed">
+                                        <button type="submit" class="btn btn-dark w-100" onclick="return confirm('I-close na ang incident?')">
+                                            <i class="bi bi-lock me-1"></i> Close Incident
+                                        </button>
+                                    </form>
+                                <?php elseif ($incident['status'] !== 'closed' && $incident['status'] !== 'rejected'): ?>
+                                    <form action="/irms/ajax/update_status.php" method="POST">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="incident_id" value="<?= $id ?>">
+                                        <input type="hidden" name="action" value="update_status">
+                                        <input type="hidden" name="old_status" value="<?= $incident['status'] ?>">
+                                        <select name="new_status" class="form-select mb-2" required>
+                                            <option value="">-- Bagong Status --</option>
+                                            <?php foreach (['pending','in_progress','resolved','closed'] as $s):
+                                                if ($s === $incident['status']) continue; ?>
+                                                <option value="<?= $s ?>"><?= ucwords(str_replace('_',' ',$s)) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <textarea name="remarks" class="form-control mb-2" rows="2" placeholder="Optional remarks..."></textarea>
+                                        <button type="submit" class="btn btn-primary w-100">Update Status</button>
+                                    </form>
+                                <?php else: ?>
+                                    <div class="alert alert-secondary py-2 small mb-0">Record is Closed</div>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- Assign Responder -->
+                            <div class="mb-0">
+                                <label class="small fw-bold text-muted text-uppercase mb-2 d-block">Assign Authority</label>
+                                <form action="/irms/ajax/assign_responder.php" method="POST">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="incident_id" value="<?= $id ?>">
+                                    <select name="responder_id" class="form-select mb-2">
+                                        <option value="">-- Select Responder --</option>
                                         <?php foreach ($responders as $r): ?>
-                                            <option value="<?= $r['id'] ?>"
-                                                <?= $incident['assigned_to'] == $r['id'] ? 'selected' : '' ?>>
+                                            <option value="<?= $r['id'] ?>" <?= $incident['assigned_to'] == $r['id'] ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($r['name']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                </div>
-                                <button type="submit" class="btn btn-success btn-sm w-100">
-                                    <i class="bi bi-check2 me-1"></i> I-assign
-                                </button>
-                            </form>
+                                    <button type="submit" class="btn btn-outline-primary w-100">Change Assignee</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Reporter info -->
-                    <div class="card border-0 shadow-sm mb-3">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-2">
-                                <i class="bi bi-person me-1"></i> Reporter Info
-                            </p>
-                            <div class="small">
-                                <div class="fw-medium mb-1">
-                                    <?= htmlspecialchars($incident['reporter_name']) ?>
+                    <!-- SLA & Reporter Stats -->
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-4">
+                            <div class="mb-4">
+                                <label class="small fw-bold text-muted text-uppercase mb-2 d-block">SLA Performance</label>
+                                <?php 
+                                $sla = $model->getSlaStatus($incident); 
+                                $pColor = $sla['status'] === 'breached' ? 'danger' : ($sla['status'] === 'warning' ? 'warning' : 'success');
+                                ?>
+                                <div class="progress mb-2" style="height: 10px; border-radius: 5px;">
+                                    <div class="progress-bar bg-<?= $pColor ?>" data-bs-toggle="tooltip" title="<?= $sla['percent'] ?>%" style="width: <?= $sla['percent'] ?>%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small">
+                                    <span class="fw-bold text-<?= $pColor ?>"><?= $sla['label'] ?></span>
+                                    <span class="text-muted"><?= $sla['percent'] ?>%</span>
+                                </div>
+                            </div>
+
+                            <hr class="my-4 op-10">
+
+                            <div>
+                                <label class="small fw-bold text-muted text-uppercase mb-2 d-block">Reporter Details</label>
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <div class="rounded-circle bg-slate text-white d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; font-weight: 700;">
+                                        <?= strtoupper(substr($incident['reporter_name'], 0, 1)) ?>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-slate small"><?= htmlspecialchars($incident['reporter_name']) ?></div>
+                                        <div class="text-muted" style="font-size: 11px;"><?= $incident['is_anonymous'] ? 'Anonymous' : 'Registered Citizen' ?></div>
+                                    </div>
                                 </div>
                                 <?php if ($incident['reporter_email']): ?>
-                                <div class="text-muted">
-                                    <i class="bi bi-envelope me-1"></i>
-                                    <?= htmlspecialchars($incident['reporter_email']) ?>
-                                </div>
+                                    <div class="small text-muted mb-1"><i class="bi bi-envelope me-2"></i><?= htmlspecialchars($incident['reporter_email']) ?></div>
                                 <?php endif; ?>
                                 <?php if ($incident['reporter_phone']): ?>
-                                <div class="text-muted mt-1">
-                                    <i class="bi bi-telephone me-1"></i>
-                                    <?= htmlspecialchars($incident['reporter_phone']) ?>
-                                </div>
-                                <?php endif; ?>
-                                <?php if ($incident['is_anonymous']): ?>
-                                <div class="mt-1">
-                                    <span class="badge bg-secondary small">Anonymous Report</span>
-                                </div>
+                                    <div class="small text-muted"><i class="bi bi-telephone me-2"></i><?= htmlspecialchars($incident['reporter_phone']) ?></div>
                                 <?php endif; ?>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Status timeline -->
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-body p-3">
-                            <p class="small fw-medium mb-3">
-                                <i class="bi bi-clock-history me-1"></i> Status History
-                            </p>
-                            <?php if (empty($logs)): ?>
-                                <p class="text-muted small mb-0">Walang log pa.</p>
-                            <?php else: ?>
-                                <div class="timeline">
-                                    <?php foreach ($logs as $log): ?>
-                                        <div class="tl-item">
-                                            <div class="tl-dot <?= $log['new_status'] === 'resolved' ? 'done' : '' ?>"></div>
-                                            <div class="small fw-medium">
-                                                <?= ucwords(str_replace('_',' ', $log['new_status'])) ?>
-                                            </div>
-                                            <div class="text-muted" style="font-size:11px;">
-                                                <?= date('M d, Y g:i A', strtotime($log['changed_at'])) ?>
-                                                · <?= htmlspecialchars($log['changed_by_name'] ?? 'System') ?>
-                                            </div>
-                                            <?php if ($log['remarks']): ?>
-                                                <div class="text-muted small mt-1">
-                                                    "<?= htmlspecialchars($log['remarks']) ?>"
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+                    <!-- Moderate -->
+                    <?php if (!in_array($incident['status'], ['closed', 'rejected'])): ?>
+                    <button class="btn btn-outline-danger btn-sm w-100 py-2 border-0" 
+                            style="background: #fff5f5;"
+                            onclick="if(confirm('BAN user and REJECT spam report?')) { document.getElementById('banForm').submit(); }">
+                        <i class="bi bi-shield-x me-2"></i> Reject & Ban User
+                    </button>
+                    <form id="banForm" action="/irms/ajax/reject_ban.php" method="POST" style="display:none;">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="incident_id" value="<?= $id ?>">
+                    </form>
+                    <?php endif; ?>
 
                 </div>
             </div>

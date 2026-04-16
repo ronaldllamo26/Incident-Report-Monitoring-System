@@ -3,6 +3,10 @@ require_once __DIR__ . '/includes/auth.php';
 if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
     redirectByRole();
 }
+
+require_once __DIR__ . '/models/Incident.php';
+$incModel = new Incident();
+$recentReports = $incModel->getRecentPublicReports(10);
 ?>
 <!DOCTYPE html>
 <html lang="fil">
@@ -13,6 +17,10 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet (Map UI) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
     <!-- PWA Requirements -->
     <link rel="manifest" href="/irms/manifest.json">
@@ -758,6 +766,53 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
         .footer-staff  { font-size:11.5px; color:rgba(255,255,255,0.35); text-decoration:none; display:flex; align-items:center; gap:5px; transition:color 0.15s; }
         .footer-staff:hover { color:rgba(255,255,255,0.65); }
 
+        /* ── LIVE TICKER ────────────────────────── */
+        .ticker-wrap {
+            width: 100%;
+            overflow: hidden;
+            background: #1e293b;
+            border-bottom: 3px solid var(--qc-gold);
+            height: 38px;
+            display: flex;
+            align-items: center;
+        }
+        .ticker {
+            display: inline-block;
+            white-space: nowrap;
+            padding-right: 100%;
+            animation: ticker 200s linear infinite;
+        }
+        .ticker__item {
+            display: inline-block;
+            padding: 0 30px;
+            font-size: 11.5px;
+            color: #fff;
+            font-weight: 500;
+        }
+        .ticker__item strong { color: var(--qc-gold); margin-right: 5px; }
+        .ticker__item .time { color: rgba(255,255,255,0.4); margin-left: 8px; font-size: 10px; }
+        @keyframes ticker {
+            0% { transform: translate3d(0, 0, 0); }
+            100% { transform: translate3d(-100%, 0, 0); }
+        }
+        .ticker-wrap:hover .ticker { animation-play-state: paused; }
+
+        /* ── WEATHER WIDGET ─────────────────────── */
+        .weather-pill {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .weather-info { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #fff; border-right: 1px solid rgba(255,255,255,0.2); padding-right: 12px; }
+        .aqi-info { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #fff; }
+        .aqi-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; }
+
         /* Mobile */
         @media (max-width:768px) {
             .hotline-quick { display:none; }
@@ -785,6 +840,41 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
         </div>
     </div>
 </div>
+
+<!-- ── LIVE TICKER BAR ──────────────────────────────── -->
+<?php if (!empty($recentReports)): ?>
+<div class="ticker-wrap">
+    <div class="ticker">
+        <?php foreach ($recentReports as $rep): 
+            $reportedAt = strtotime($rep['reported_at']);
+            $diff = time() - $reportedAt;
+            $agoSecs = max(0, $diff);
+            $ago = $agoSecs / 60;
+            
+            if ($ago < 1) {
+                $agoText = "Just now";
+            } else if ($ago < 60) {
+                $agoText = floor($ago) . "m ago";
+            } else {
+                $agoText = floor($ago/60) . "h ago";
+            }
+        ?>
+            <div class="ticker__item">
+                <strong><?= htmlspecialchars($rep['category']) ?>:</strong> 
+                Reported at <?= htmlspecialchars(explode(',', $rep['location'])[0]) ?>
+                <span class="time"><i class="bi bi-clock me-1"></i><?= $agoText ?></span>
+            </div>
+<?php endforeach; ?>
+        <?php // Repeat for smooth loop ?>
+        <?php foreach ($recentReports as $rep): ?>
+            <div class="ticker__item">
+                <strong><?= htmlspecialchars($rep['category']) ?>:</strong> 
+                Reported at <?= htmlspecialchars(explode(',', $rep['location'])[0]) ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ── NAVBAR ──────────────────────────────────────── -->
 <nav class="main-nav">
@@ -863,9 +953,21 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
 
             <!-- Left: Text content -->
             <div class="col-lg-7">
-                <div class="qc-chip">
-                    <span class="live"></span>
-                    Quezon City — Opisyal na Sistema
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                    <div class="qc-chip mb-0">
+                        <span class="live"></span>
+                        Quezon City — Opisyal na Sistema
+                    </div>
+                    <div class="weather-pill mb-0">
+                        <div class="weather-info">
+                            <i class="bi bi-cloud-sun-fill text-warning"></i>
+                            <span>31°C Quezon City</span>
+                        </div>
+                        <div class="aqi-info">
+                            <span class="aqi-dot"></span>
+                            <span>AQI: Good</span>
+                        </div>
+                    </div>
                 </div>
                 <h1 class="hero-title">
                     Bawat Report,<br>
@@ -1046,6 +1148,37 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
                 </div>
             </div>
             <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<!-- ── MAP PREVIEW (LIVE INSIGHTS) ───────────────────── -->
+<section class="section-pad bg-white">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5">
+                <div class="sec-label">SITWASYON NGAYON</div>
+                <h2 class="sec-title">Incident Heatmap View</h2>
+                <p class="sec-sub">
+                    Transparente nating nakikita ang mga kaganapan sa buong lungsod. 
+                    Ang mapang ito ay nagpapakita ng kumpol ng mga ulat (heatmaps) 
+                    para malaman kung saang lugar ang nangangailangan ng higit na atensyon.
+                </p>
+                <div class="mt-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="rounded-circle bg-success" style="width:10px;height:10px;"></div>
+                        <div class="small fw-bold">Live Data Feed Active</div>
+                    </div>
+                    <a href="/irms/public/map.php" class="btn btn-primary px-4 py-2 fw-bold shadow-sm" style="border-radius:8px;">
+                        <i class="bi bi-map me-2"></i> Tingnan ang Full Map
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-lg overflow-hidden" style="border-radius: 20px !important;">
+                    <div id="insight-map" style="height: 450px; background: #e5e7eb; border: 1px solid var(--border);"></div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -1249,16 +1382,28 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
                 <div class="footer-hl"><i class="bi bi-heart-pulse-fill" style="color:#10b981;"></i> QCDRRMO: <strong>(02) 8988-4242</strong></div>
             </div>
         </div>
-        <div class="footer-bottom">
-            <div class="footer-copy">
-                © <?= date('Y') ?> QC-ALERTO — Quezon City Incident Report & Monitoring System.
-            </div>
-            <a href="/irms/portal/login.php" class="footer-staff">
-                <i class="bi bi-shield-lock"></i> Staff Portal
-            </a>
         </div>
     </div>
 </footer>
+
+<!-- ── PWA PROMPT (MOBILE ONLY) ──────────────────────── -->
+<div id="pwa-prompt" class="fixed-bottom p-3 d-none" style="z-index: 2000;">
+    <div class="card shadow-lg border-0 bg-dark text-white p-3" style="border-radius: 15px;">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" width="40" height="40" alt="Logo">
+                <div>
+                    <div class="fw-bold small">Install QC-ALERTO</div>
+                    <div class="text-white-50" style="font-size: 11px;">Mabilis na access sa iyong homescreen</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-light" onclick="this.closest('#pwa-prompt').remove()">Close</button>
+                <button id="pwa-install-btn" class="btn btn-sm btn-warning fw-bold">Install</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Turf.js (REQUIRED for QC boundary checking) -->
@@ -1334,6 +1479,63 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+
+// PWA Install Logic
+let deferredPrompt;
+const pwaPrompt = document.getElementById('pwa-prompt');
+const installBtn = document.getElementById('pwa-install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (window.innerWidth < 768) {
+        pwaPrompt.classList.remove('d-none');
+    }
+});
+
+if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') pwaPrompt.remove();
+            deferredPrompt = null;
+        }
+    });
+}
+
+// Insight Map Initialization
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('insight-map')) {
+        // Gamitin ang official QC Map init para sa professional look
+        const iMap = initQCMap('insight-map');
+        
+        // I-enable ang dragging/scroll para ma-explore ni citizen ang heatmap
+        iMap.dragging.enable();
+        iMap.scrollWheelZoom.enable();
+        
+        // Fetch public data for heatmap/markers
+        fetch('/irms/ajax/get_map_data.php')
+            .then(res => res.json())
+            .then(data => {
+                data.forEach(p => {
+                    if (p.latitude && p.longitude) {
+                        L.circleMarker([p.latitude, p.longitude], {
+                            radius: 8,
+                            fillColor: "#ef4444",
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.7
+                        }).addTo(iMap);
+                    }
+                });
+            });
+    }
+});
 </script>
+
+<!-- AI Assistant Bubble Script -->
+<script src="/irms/assets/js/qc_ai_bubble.js"></script>
 </body>
 </html>

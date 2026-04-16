@@ -7,12 +7,33 @@ require_once __DIR__ . '/../../models/Incident.php';
 $user  = currentUser();
 $model = new Incident();
 
-$incidents = $model->getAll(['assigned_to' => $user['id']]);
+$filters = ['assigned_to' => $user['id']];
+if (!empty($_GET['status'])) $filters['status'] = $_GET['status'];
+$search = trim($_GET['search'] ?? '');
 
-$counts = ['all' => count($incidents), 'pending' => 0, 'in_progress' => 0, 'resolved' => 0, 'closed' => 0];
-foreach ($incidents as $inc) {
+$perPage    = 20;
+$page       = max(1, (int)($_GET['page'] ?? 1));
+$offset     = ($page - 1) * $perPage;
+
+// We need counts for ALL statuses for the header cards
+$allIncidents = $model->getAll(['assigned_to' => $user['id']]);
+$counts = ['all' => count($allIncidents), 'pending' => 0, 'in_progress' => 0, 'resolved' => 0, 'closed' => 0];
+foreach ($allIncidents as $inc) {
     if (isset($counts[$inc['status']])) $counts[$inc['status']]++;
 }
+
+// Now get the specific paginated results (with optional status filter)
+// Note: We'll implement a simple PHP search if provided
+$paginatedIncidents = $model->getAll($filters, $perPage, $offset);
+// Simple search filtering if needed (though Incident::getAll could be updated for LIKE)
+if ($search) {
+    $paginatedIncidents = array_filter($paginatedIncidents, function($i) use ($search) {
+        return str_contains(strtolower($i['title']), strtolower($search)) || 
+               str_contains(strtolower($i['location']), strtolower($search));
+    });
+}
+$totalFiltered = $model->countTotal($filters);
+$totalPages    = ceil($totalFiltered / $perPage);
 
 $stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'closed' => 'Closed'];
 $stStyle = [
@@ -180,7 +201,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
     <!-- Stat Cards -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="stat-card active" id="sc-all" onclick="setFilter('all',this)">
+            <a href="?status=" class="stat-card <?= empty($_GET['status']) ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#f0f4ff;">
                     <i class="bi bi-clipboard-list" style="color:var(--qc-blue);"></i>
                 </div>
@@ -188,10 +209,10 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                     <div class="stat-num"><?= $counts['all'] ?></div>
                     <div class="stat-lbl">Lahat</div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card" id="sc-pending" onclick="setFilter('pending',this)">
+            <a href="?status=pending" class="stat-card <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#fffbeb;">
                     <i class="bi bi-hourglass-split" style="color:#d97706;"></i>
                 </div>
@@ -199,10 +220,10 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                     <div class="stat-num"><?= $counts['pending'] ?></div>
                     <div class="stat-lbl">Pending</div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card" id="sc-in_progress" onclick="setFilter('in_progress',this)">
+            <a href="?status=in_progress" class="stat-card <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#eff6ff;">
                     <i class="bi bi-arrow-repeat" style="color:#1d4ed8;"></i>
                 </div>
@@ -210,10 +231,10 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                     <div class="stat-num"><?= $counts['in_progress'] ?></div>
                     <div class="stat-lbl">In Progress</div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-6 col-md-3">
-            <div class="stat-card" id="sc-resolved" onclick="setFilter('resolved',this)">
+            <a href="?status=resolved" class="stat-card <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#f0fdf4;">
                     <i class="bi bi-check-circle" style="color:#16a34a;"></i>
                 </div>
@@ -221,7 +242,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                     <div class="stat-num"><?= $counts['resolved'] ?></div>
                     <div class="stat-lbl">Resolved</div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
@@ -233,17 +254,18 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                     <i class="bi bi-list-ul me-1" style="color:var(--qc-blue);"></i>
                     Listahan ng Incidents
                 </span>
-                <div class="filter-tabs">
-                    <span class="ftab active" data-st="all" onclick="setTabFilter('all',this)">Lahat (<?= $counts['all'] ?>)</span>
-                    <span class="ftab" data-st="pending" onclick="setTabFilter('pending',this)">Pending (<?= $counts['pending'] ?>)</span>
-                    <span class="ftab" data-st="in_progress" onclick="setTabFilter('in_progress',this)">In Progress (<?= $counts['in_progress'] ?>)</span>
-                    <span class="ftab" data-st="resolved" onclick="setTabFilter('resolved',this)">Resolved (<?= $counts['resolved'] ?>)</span>
+                    <div class="filter-tabs">
+                        <a href="?status=" class="ftab <?= empty($_GET['status']) ? 'active' : '' ?>" style="text-decoration:none;">Lahat (<?= $counts['all'] ?>)</a>
+                        <a href="?status=pending" class="ftab <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>" style="text-decoration:none;">Pending (<?= $counts['pending'] ?>)</a>
+                        <a href="?status=in_progress" class="ftab <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>" style="text-decoration:none;">In Progress (<?= $counts['in_progress'] ?>)</a>
+                        <a href="?status=resolved" class="ftab <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>" style="text-decoration:none;">Resolved (<?= $counts['resolved'] ?>)</a>
+                    </div>
                 </div>
-            </div>
-            <div class="search-box">
-                <i class="bi bi-search si"></i>
-                <input type="text" id="search-inp" placeholder="Hanapin..." oninput="doSearch(this.value)">
-            </div>
+                <form method="GET" class="search-box">
+                    <input type="hidden" name="status" value="<?= htmlspecialchars($_GET['status']??'') ?>">
+                    <i class="bi bi-search si"></i>
+                    <input type="text" name="search" placeholder="Hanapin..." value="<?= htmlspecialchars($search) ?>">
+                </form>
         </div>
 
         <?php if (empty($incidents)): ?>
@@ -265,12 +287,11 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                         </tr>
                     </thead>
                     <tbody>
-                    <?php foreach ($incidents as $inc):
+                    <?php foreach ($paginatedIncidents as $inc):
                         $sc = $sevColor[$inc['severity']] ?? '#64748b';
                         $ss = $stStyle[$inc['status']] ?? '';
                     ?>
-                        <tr data-status="<?= $inc['status'] ?>"
-                            data-title="<?= strtolower(htmlspecialchars($inc['title'])) ?>">
+                        <tr>
                             <td>
                                 <span class="sev-dot" style="background:<?= $sc ?>;"></span>
                             </td>
@@ -306,44 +327,53 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                     </tbody>
                 </table>
             </div>
-            <div id="no-results" class="empty-state">
+            <div id="no-results" class="empty-state" style="<?= empty($paginatedIncidents) ? 'display:block' : 'display:none' ?>">
                 <i class="bi bi-search" style="font-size:36px;color:#cbd5e1;display:block;margin-bottom:10px;"></i>
                 <p class="text-muted mb-0">Walang nahanap na incident.</p>
             </div>
+
+            <!-- Pagination -->
+            <?php if ($totalPages > 1): ?>
+            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top" style="background:#fafbfc;">
+                <div class="text-muted small">
+                    Showing <?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $totalFiltered)) ?> of <?= number_format($totalFiltered) ?>
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        <?php
+                        $start = max(1, $page - 2);
+                        $end   = min($totalPages, $page + 2);
+                        for ($p = $start; $p <= $end; $p++):
+                        ?>
+                        <li class="page-item <?= $p == $page ? 'active' : '' ?>">
+                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>">
+                                <?= $p ?>
+                            </a>
+                        </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 
 </div>
 
-<script>
-var curF = 'all';
-function setFilter(s, el) {
-    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-    document.querySelectorAll('.ftab').forEach(t => t.classList.toggle('active', t.dataset.st === s));
-    curF = s; apply();
-}
-function setTabFilter(s, el) {
-    document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
-    var sc = document.getElementById('sc-' + s);
-    if (sc) sc.classList.add('active');
-    curF = s; apply();
-}
-function doSearch(q) { apply(q.toLowerCase().trim()); }
-function apply(q) {
-    if (q === undefined) q = document.getElementById('search-inp').value.toLowerCase().trim();
-    var rows = document.querySelectorAll('#inc-table tbody tr');
-    var vis = 0;
-    rows.forEach(function(r) {
-        var ok = (curF === 'all' || r.dataset.status === curF) && (!q || r.dataset.title.includes(q));
-        r.style.display = ok ? '' : 'none';
-        if (ok) vis++;
-    });
-    var nr = document.getElementById('no-results');
-    if (nr) nr.style.display = (vis === 0 && rows.length > 0) ? 'block' : 'none';
-}
-</script>
+<style>
+/* Add a little styling for the pagination buttons inside the card */
+.pagination .page-link { color: var(--qc-blue); border-color: var(--border); }
+.pagination .page-item.active .page-link { background: var(--qc-blue); border-color: var(--qc-blue); color: #fff; }
+</style>
 </body>
 </html>

@@ -258,6 +258,14 @@ $success = $_GET['success'] ?? '';
             font-weight: 500;
         }
         .back-link a:hover { color: var(--qa-blue); }
+        
+        /* Iron Dome Honeypot styling */
+        .hp-field {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute;
+            left: -9999px;
+        }
     </style>
 </head>
 <body>
@@ -325,6 +333,11 @@ $success = $_GET['success'] ?? '';
 
         <form action="/irms/controllers/AuthController.php?action=login" method="POST">
             <?= csrf_field() ?>
+            
+            <!-- Iron Dome Honeypot (DO NOT FILL) -->
+            <div class="hp-field">
+                <input type="text" name="website_url" autocomplete="off" tabindex="-1">
+            </div>
 
             <div class="mb-4">
                 <label class="form-label-custom">Email Address</label>

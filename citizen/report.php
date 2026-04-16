@@ -694,5 +694,66 @@ document.getElementById('report-form').addEventListener('submit', function(e) {
     }
 });
 </script>
+<script src="/irms/assets/js/ai_assistant.js"></script>
+<script>
+// Initialize AI Assistant with safety checks
+if (typeof QCAlertAI !== 'undefined') {
+    const ai = new QCAlertAI();
+    const titleInput = document.querySelector('input[name="title"]');
+    const descInput = document.querySelector('textarea[name="description"]');
+    const categorySelect = document.querySelector('select[name="category_id"]');
+    const severitySelect = document.querySelector('select[name="severity"]');
+    const dupWarning = document.getElementById('realtime-dup-warning');
+
+    if (titleInput && descInput && categorySelect && severitySelect) {
+        // UI Elements for AI
+        const aiBadge = document.createElement('div');
+        aiBadge.id = 'ai-suggestion-badge';
+        aiBadge.style.cssText = 'display:none;font-size:11px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 10px;border-radius:6px;margin-top:6px;font-weight:600;align-items:center;gap:6px;';
+        categorySelect.parentNode.appendChild(aiBadge);
+
+        const urgencyAlert = document.createElement('div');
+        urgencyAlert.id = 'ai-urgency-alert';
+        urgencyAlert.className = 'alert alert-danger py-2 px-3 mt-3 small mb-0 d-none';
+        urgencyAlert.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill fs-6"></i><div><strong>AI Emergency Detection:</strong> Napansin naming seryoso ang insidenteng ito. In-adjust namin ang severity sa <strong>Critical</strong>.</div></div>';
+        if (dupWarning) dupWarning.after(urgencyAlert);
+
+        let hasAutoSetSeverity = false;
+
+        function runAI() {
+            const combinedText = (titleInput.value + ' ' + descInput.value).trim();
+            if (combinedText.length < 3) {
+                aiBadge.style.display = 'none';
+                urgencyAlert.classList.add('d-none');
+                return;
+            }
+
+            const result = ai.analyze(combinedText);
+            
+            // 1. Suggest Category
+            if (result && result.category) {
+                aiBadge.innerHTML = 'AI Recommendation: <span class="fw-bold"> ' + result.category + '</span>';
+                aiBadge.style.display = 'flex';
+            } else {
+                aiBadge.style.display = 'none';
+            }
+
+            // 2. Detect Urgency
+            if (result && result.isEmergency) {
+                urgencyAlert.classList.remove('d-none');
+                if (!hasAutoSetSeverity) {
+                    severitySelect.value = 'critical';
+                    hasAutoSetSeverity = true;
+                }
+            } else {
+                urgencyAlert.classList.add('d-none');
+            }
+        }
+
+        titleInput.addEventListener('input', runAI);
+        descInput.addEventListener('input', runAI);
+    }
+}
+</script>
 </body>
 </html>
