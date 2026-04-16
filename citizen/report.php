@@ -336,16 +336,16 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                             <input type="hidden" name="longitude" id="longitude">
                         </div>
 
-                        <!-- Photo Upload -->
+                        <!-- Evidence Upload -->
                         <div class="mb-4">
                             <label class="form-label small fw-medium">
-                                Mag-upload ng Larawan
-                                <span class="text-muted fw-normal">(optional, max 5 photos)</span>
+                                Mag-upload ng Ebidensya (Larawan o Video)
+                                <span class="text-muted fw-normal">(optional, max 5 files, 50MB max per video)</span>
                             </label>
-                            <input type="file" name="photos[]" id="photo-input"
-                                class="form-control" accept="image/*"
-                                multiple onchange="previewImages(event)">
-                            <div id="image-preview"></div>
+                            <input type="file" name="evidence[]" id="evidence-upload"
+                                class="form-control" accept="image/*,video/mp4,video/webm"
+                                multiple onchange="previewMedia(event)">
+                            <div id="media-preview" class="mt-2 d-flex flex-wrap gap-2"></div>
                         </div>
 
                         <!-- Buttons -->
@@ -369,6 +369,14 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Fix Leaflet broken default icons when pulling from CDN
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
+});
+
 // ================= MAP INIT =================
 var map = L.map('map', {
     center: [14.6760, 121.0437],
@@ -553,18 +561,41 @@ function handleMyLocation(event) {
     }, { enableHighAccuracy:true, timeout:10000 });
 }
 
-// ================= IMAGE PREVIEW =================
-function previewImages(event) {
-    var preview = document.getElementById('image-preview');
+// ================= MEDIA PREVIEW & VALIDATION =================
+function previewMedia(event) {
+    var preview = document.getElementById('media-preview');
     preview.innerHTML = '';
     var files = event.target.files;
-    if (files.length > 5) { alert('Maximum 5 photos lang.'); event.target.value = ''; return; }
+    var maxFileSize = 52428800; // 50MB
+    
+    if (files.length > 5) { 
+        alert('Maximum 5 files lang ang pwedeng i-upload.'); 
+        event.target.value = ''; 
+        return; 
+    }
+    
     Array.from(files).forEach(function(file) {
+        if (file.size > maxFileSize) {
+            alert('Masyadong malaki ang file na: ' + file.name + ' (Lagpas 50MB). Paki-pili ng mas maliit na video.');
+            event.target.value = '';
+            preview.innerHTML = '';
+            return;
+        }
+
         var reader = new FileReader();
         reader.onload = function(e) {
-            var img = document.createElement('img');
-            img.src = e.target.result; img.className = 'preview-img';
-            preview.appendChild(img);
+            if (file.type.startsWith('video/')) {
+                var vid = document.createElement('video');
+                vid.src = e.target.result; 
+                vid.className = 'preview-img';
+                vid.style.objectFit = 'cover';
+                preview.appendChild(vid);
+            } else {
+                var img = document.createElement('img');
+                img.src = e.target.result; 
+                img.className = 'preview-img';
+                preview.appendChild(img);
+            }
         };
         reader.readAsDataURL(file);
     });

@@ -164,17 +164,24 @@ $error   = $_GET['error']   ?? '';
                     <?php if ($attachments): ?>
                     <div class="card border-0 shadow-sm mb-3">
                         <div class="card-body p-3">
-                            <p class="small fw-medium mb-2">
-                                <i class="bi bi-images me-1"></i>
-                                Mga Larawan (<?= count($attachments) ?>)
+                            <p class="small fw-medium mb-3">
+                                <i class="bi bi-folder2-open me-1"></i>
+                                Mga Ebidensya (<?= count($attachments) ?>)
                             </p>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="d-flex flex-wrap gap-3 align-items-start">
                                 <?php foreach ($attachments as $a): ?>
-                                    <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>"
-                                       target="_blank">
-                                        <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>"
-                                             class="attach-img" alt="attachment">
-                                    </a>
+                                    <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
+                                        <div style="max-width: 250px; flex: 1 1 200px;">
+                                            <video controls class="rounded border shadow-sm" style="width: 100%; max-height: 200px; background: #000;">
+                                                <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
+                                                Hindi compatible ang video sa browser mo.
+                                            </video>
+                                        </div>
+                                    <?php else: ?>
+                                        <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
+                                            <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="attach-img shadow-sm" alt="attachment">
+                                        </a>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                             </div>
                         </div>
@@ -298,6 +305,21 @@ $error   = $_GET['error']   ?? '';
                                 <i class="bi bi-lock me-1"></i> Closed na ang incident na ito.
                             </div>
                             <?php endif; ?>
+
+                            <?php if (!in_array($incident['status'], ['closed', 'rejected'])): ?>
+                            <hr class="my-3 text-muted">
+                            <p class="small fw-bold mb-2 text-danger" style="font-size: 11px; text-transform: uppercase;">
+                                <i class="bi bi-shield-exclamation me-1"></i> Troll / Spam Moderation
+                            </p>
+                            <form action="/irms/ajax/reject_ban.php" method="POST"
+                                  onsubmit="return confirm('WARNING: Mabubura ang lahat ng attachments, ipapasara ang incident, at iba-BAN ang IP/Account ng nag-submit ng pang-habambuhay. Isa itong permanenteng parusa. Ituloy?');">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="incident_id" value="<?= $id ?>">
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold pb-2 pt-2">
+                                    <i class="bi bi-hammer me-1"></i> Reject Spam & Ban Poster
+                                </button>
+                            </form>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -400,6 +422,14 @@ $error   = $_GET['error']   ?? '';
 <?php if ($incident['latitude'] && $incident['longitude']): ?>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
+// Fix Leaflet broken default icons when pulling from CDN
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
+});
+
 var map = L.map('map', { zoomControl:true, dragging:false, scrollWheelZoom:false })
            .setView([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>], 16);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

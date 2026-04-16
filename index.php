@@ -13,6 +13,12 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- PWA Requirements -->
+    <link rel="manifest" href="/irms/manifest.json">
+    <meta name="theme-color" content="#111827">
+    <link rel="apple-touch-icon" href="/irms/assets/img/QC_LOGO_CIRCLE.png">
+    
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
@@ -32,6 +38,29 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
             --border2:   #C5CEDF;
         }
         html { scroll-behavior: smooth; }
+        
+        /* Itago ang default browser scrollbar kapag cellphone/App Mode para mag-mukhang tunay na App */
+        @media all and (display-mode: standalone), (max-width: 768px) {
+            * {
+                -ms-overflow-style: none !important; 
+                scrollbar-width: none !important; 
+            }
+            ::-webkit-scrollbar {
+                display: none !important;
+                width: 0px !important;
+                background: transparent !important;
+            }
+            body::-webkit-scrollbar, html::-webkit-scrollbar {
+                display: none !important;
+                width: 0px !important;
+            }
+        }
+
+        html, body {
+            overflow-x: hidden;
+            max-width: 100%;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background: var(--bg);
@@ -773,6 +802,7 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
                 class="nav-logo-img">
             </a>
             <div class="nav-links">
+                <a href="/irms/public/map.php" class="nav-link-btn text-warning fw-bold"><i class="bi bi-map-fill"></i> Public Map</a>
                 <a href="#how-it-works" class="nav-link-btn">Paano Gumagana</a>
                 <a href="#hotlines"     class="nav-link-btn">Mga Hotline</a>
                 <a href="#categories"   class="nav-link-btn">Kategorya</a>
@@ -796,6 +826,9 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
              style="height:32px;width:32px;object-fit:contain;">
         <button class="mob-close" onclick="closeMobile()"><i class="bi bi-x-lg"></i></button>
     </div>
+    <a href="/irms/public/map.php" class="mob-nav-link" onclick="closeMobile()">
+        <i class="bi bi-map-fill" style="color:var(--qc-gold);"></i> Public Map
+    </a>
     <a href="#how-it-works" class="mob-nav-link" onclick="closeMobile()">
         <i class="bi bi-info-circle" style="color:var(--qc-blue);"></i> Paano Gumagana
     </a>
@@ -847,6 +880,9 @@ if (isLoggedIn() && in_array($_SESSION['role'], ['admin', 'responder'])) {
                 <div class="d-flex gap-3 flex-wrap">
                     <a href="/irms/public/report.php" class="hero-btn-primary">
                         <i class="bi bi-megaphone-fill"></i> Mag-report ng Insidente
+                    </a>
+                    <a href="/irms/public/map.php" class="hero-btn-secondary" style="background: rgba(245, 166, 35, 0.2); border-color: rgba(245, 166, 35, 0.5);">
+                        <i class="bi bi-map-fill text-warning"></i> Public Map
                     </a>
                     <a href="/irms/public/track.php" class="hero-btn-secondary">
                         <i class="bi bi-search"></i> I-track ang Report
@@ -1284,6 +1320,20 @@ function toggleFaq(card) {
     }
 }
 </script>
-</body>
 
+<script>
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/irms/sw.js')
+            .then(registration => {
+                console.log('QC-ALERTO PWA ServiceWorker registered with scope:', registration.scope);
+            })
+            .catch(error => {
+                console.error('ServiceWorker registration failed:', error);
+            });
+    });
+}
+</script>
+</body>
 </html>

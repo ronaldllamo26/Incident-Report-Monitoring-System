@@ -105,16 +105,25 @@ frame-ancestors 'self';"
 
 </IfModule>
 
-# ── 3. PHP ERROR DISPLAY — never expose errors to the browser ──
+# ── 3. PHP ERROR DISPLAY & UPLOAD LIMITS ────────────────────────
 <IfModule mod_php.c>
     php_flag display_errors Off
     php_flag log_errors On
+
+    # Increase limits for Video Evidence (Max 50MB per file)
+    php_value upload_max_filesize 100M
+    php_value post_max_size 105M
+    php_value max_execution_time 300
+    php_value max_input_time 300
 </IfModule>
 
 # ── 4. PREVENT HOTLINKING OF UPLOADED IMAGES ──────────────────
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{HTTP_REFERER} !^$
-    RewriteCond %{HTTP_REFERER} !^https?://(www\.)?localhost [NC]
-    RewriteRule \.(jpg|jpeg|png|gif|webp)$ - [F,NC]
-</IfModule>
+# TEMPORARILY DISABLED for Local Testing & PWA Tunnels
+# <IfModule mod_rewrite.c>
+#     RewriteEngine On
+#     RewriteCond %{HTTP_REFERER} !^$
+#     RewriteCond %{HTTP_REFERER} !^https?://(www\.)?localhost [NC]
+#     RewriteCond %{HTTP_REFERER} !^https?://192\.168\. [NC]
+#     RewriteCond %{HTTP_REFERER} !^https?://127\.0\.0\.1 [NC]
+#     RewriteRule \.(jpg|jpeg|png|gif|webp)$ - [F,NC]
+# </IfModule>

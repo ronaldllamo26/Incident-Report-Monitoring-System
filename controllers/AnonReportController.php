@@ -14,13 +14,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 validate_csrf();
 
-// ── RATE LIMITING (Anonymous Reports) ────────────────────────
-// Max 3 anonymous reports per IP per hour.
-// Prevents spam/bot flooding without requiring login.
 $_anonIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 if (str_contains($_anonIp, ',')) {
     $_anonIp = trim(explode(',', $_anonIp)[0]);
 }
+
+// ── BAN CHECK ────────────────────────────────────────────────
+$banCheck = $pdo->prepare("SELECT id FROM banned_ips WHERE ip_address = ?");
+$banCheck->execute([$_anonIp]);
+if ($banCheck->fetch()) {
+    http_response_code(403);
+    die("Pasadya at paulit-ulit na paglabag sa alituntunin. Ang iyong connection ay permanenteng na-ban sa paggamit ng system.");
+}
+// ─────────────────────────────────────────────────────────────
 if (isRateLimited($pdo, $_anonIp, 'anon_report', 3, 3600)) {
     header('Location: /irms/public/report.php?error=' .
            urlencode('Masyadong maraming reports mula sa iyong koneksyon. Subukan ulit pagkatapos ng isang oras.'));
@@ -154,8 +160,8 @@ $stmt = $pdo->prepare("
         (category_id, title, description, location,
          latitude, longitude, severity, status,
          is_anonymous, anon_name, anon_email, anon_phone,
-         tracking_number, is_duplicate, duplicate_of)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 1, ?, ?, ?, ?, ?, ?)
+         tracking_number, is_duplicate, duplicate_of, ip_address)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 1, ?, ?, ?, ?, ?, ?, ?)
 ");
 $stmt->execute([
     $cat, $title, $desc, $location,
@@ -165,7 +171,8 @@ $stmt->execute([
     $anonPhone ?: null,
     $tracking,
     $isDuplicate,
-    $duplicateOf
+    $duplicateOf,
+    $_anonIp
 ]);
 $incidentId = $pdo->lastInsertId();
 
@@ -183,17 +190,17 @@ $pdo->prepare("
     VALUES (?, NULL, NULL, 'pending', ?)
 ")->execute([$incidentId, $remarks]);
 
-// Photo uploads (with strict MIME type + magic byte validation)
-if (!empty($_FILES['photos']['name'][0])) {
+// Media uploads (Photos/Videos with strict MIME type + magic byte validation)
+if (!empty($_FILES['evidence']['name'][0])) {
     $uploadDir = __DIR__ . '/../uploads/';
-    foreach ($_FILES['photos']['tmp_name'] as $i => $tmp) {
-        if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) continue;
+    foreach ($_FILES['evidence']['tmp_name'] as $i => $tmp) {
+        if ($_FILES['evidence']['error'][$i] !== UPLOAD_ERR_OK) continue;
 
-        $check = validateUploadedImage($tmp, $_FILES['photos']['name'][$i]);
+        $check = validateUploadedMedia($tmp, $_FILES['evidence']['name'][$i]);
         if (!$check['valid']) {
             // Skip invalid file — log the rejection
             logAudit($pdo, null, 'upload_rejected', 'incident', $incidentId,
-                'File rejected: ' . $_FILES['photos']['name'][$i] . ' — ' . $check['error']);
+                'File rejected: ' . $_FILES['evidence']['name'][$i] . ' — ' . $check['error']);
             continue;
         }
 
@@ -204,7 +211,7 @@ if (!empty($_FILES['photos']['name'][0])) {
                 VALUES (?, ?, ?, ?)
             ")->execute([
                 $incidentId,
-                $_FILES['photos']['name'][$i],
+                $_FILES['evidence']['name'][$i],
                 'uploads/' . $filename,
                 $check['mime'], // Server-detected MIME, NOT client-supplied
             ]);

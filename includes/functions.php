@@ -322,25 +322,25 @@ function recordRateHit(PDO $pdo, string $identifier, string $action, int $window
 // ── SECURE FILE UPLOAD ───────────────────────────────────
 
 /**
- * Validate an uploaded image file with strict security checks.
+ * Validate an uploaded media file (Image or Video) with strict security checks.
  * 
  * Checks performed:
- *   1. File extension whitelist
+ *   1. File extension whitelist (Images + MP4/WebM)
  *   2. MIME type via finfo (reads magic bytes, NOT client-supplied)
- *   3. getimagesize() — confirms it's a real image
- *   4. File size limit (default 10MB)
- *   5. Rejects double extensions (e.g. shell.php.jpg)
+ *   3. getimagesize() — ONLY if it is an image
+ *   4. File size limit (default 50MB)
+ *   5. Rejects double extensions (e.g. shell.php.mp4)
  *
  * @param string $tmpPath   The temporary file path ($_FILES['...']['tmp_name'])
  * @param string $origName  The original file name ($_FILES['...']['name'])
- * @param int    $maxSize   Max file size in bytes (default 10MB)
+ * @param int    $maxSize   Max file size in bytes (default 50MB)
  * @return array ['valid' => bool, 'error' => string, 'mime' => string, 'ext' => string]
  */
-function validateUploadedImage(string $tmpPath, string $origName, int $maxSize = 10485760): array {
+function validateUploadedMedia(string $tmpPath, string $origName, int $maxSize = 52428800): array {
     $result = ['valid' => false, 'error' => '', 'mime' => '', 'ext' => ''];
 
     // ── 1. Extension whitelist ─────────────────────────
-    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    $allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'webm'];
     $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
 
     if (!in_array($ext, $allowedExts, true)) {
@@ -349,14 +349,14 @@ function validateUploadedImage(string $tmpPath, string $origName, int $maxSize =
     }
 
     // ── 2. Reject double/dangerous extensions ──────────
-    // e.g. "shell.php.jpg", "backdoor.phtml.png"
+    // e.g. "shell.php.jpg", "backdoor.phtml.mp4"
     $dangerousExts = ['php', 'phtml', 'phar', 'php3', 'php4', 'php5', 'php7', 'phps',
                       'cgi', 'pl', 'py', 'jsp', 'asp', 'aspx', 'exe', 'sh', 'bat', 'cmd', 'svg'];
     $nameParts = explode('.', strtolower($origName));
     array_pop($nameParts); // Remove the last (already checked) extension
     foreach ($nameParts as $part) {
         if (in_array($part, $dangerousExts, true)) {
-            $result['error'] = 'Suspicious filename detected — hindi pwedeng mag-upload ng ganitong file.';
+            $result['error'] = 'Suspicious filename detected — bawal mag-upload ng ganitong file format.';
             return $result;
         }
     }
@@ -369,11 +369,11 @@ function validateUploadedImage(string $tmpPath, string $origName, int $maxSize =
     $fileSize = filesize($tmpPath);
     if ($fileSize > $maxSize) {
         $maxMB = round($maxSize / 1048576, 1);
-        $result['error'] = "Masyadong malaki ang file. Maximum {$maxMB}MB lang.";
+        $result['error'] = "Masyadong malaki ang file. Maximum {$maxMB}MB lang per upload.";
         return $result;
     }
     if ($fileSize === 0) {
-        $result['error'] = 'Empty file — walang laman ang file.';
+        $result['error'] = 'Empty file — walang laman ang file na in-upload.';
         return $result;
     }
 
@@ -383,21 +383,25 @@ function validateUploadedImage(string $tmpPath, string $origName, int $maxSize =
         'image/png',
         'image/gif',
         'image/webp',
+        'video/mp4',
+        'video/webm'
     ];
 
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $detectedMime = $finfo->file($tmpPath);
 
     if (!in_array($detectedMime, $allowedMimes, true)) {
-        $result['error'] = "Invalid file type. Detected: {$detectedMime}. Images lang ang allowed.";
+        $result['error'] = "Invalid file type. Detected: {$detectedMime}. Mga Photos at Valid Videos lang ang pwedeng isubmit.";
         return $result;
     }
 
-    // ── 5. Verify it's actually an image (getimagesize) ─
-    $imageInfo = @getimagesize($tmpPath);
-    if ($imageInfo === false) {
-        $result['error'] = 'Hindi valid na image file. Baka corrupted o hindi totoong image.';
-        return $result;
+    // ── 5. Verify integrity (Images only) ──────────────
+    if (str_starts_with($detectedMime, 'image/')) {
+        $imageInfo = @getimagesize($tmpPath);
+        if ($imageInfo === false) {
+            $result['error'] = 'Hindi ito valid na image file. Baka corrupted o hindi totoong larawan.';
+            return $result;
+        }
     }
 
     // ── 6. Cross-check: extension matches detected MIME ─
@@ -406,10 +410,13 @@ function validateUploadedImage(string $tmpPath, string $origName, int $maxSize =
         'image/png'  => ['png'],
         'image/gif'  => ['gif'],
         'image/webp' => ['webp'],
+        'video/mp4'  => ['mp4'],
+        'video/webm' => ['webm'],
     ];
+    
     $validExtsForMime = $mimeToExt[$detectedMime] ?? [];
     if (!in_array($ext, $validExtsForMime, true)) {
-        $result['error'] = "Mismatch: ang file extension (.{$ext}) ay hindi tugma sa actual na content ({$detectedMime}).";
+        $result['error'] = "Security Violation: Ang file extension (.{$ext}) ay hindi tugma sa actual na laman/mime-type ({$detectedMime}).";
         return $result;
     }
 

@@ -40,8 +40,9 @@ CREATE TABLE incidents (
     location      VARCHAR(255) NOT NULL,
     latitude      DECIMAL(10,8) DEFAULT NULL,
     longitude     DECIMAL(11,8) DEFAULT NULL,
+    ip_address    VARCHAR(45) DEFAULT NULL,
     severity      ENUM('low','medium','high','critical') DEFAULT 'medium',
-    status        ENUM('pending','in_progress','resolved','closed') DEFAULT 'pending',
+    status        ENUM('pending','in_progress','resolved','closed','rejected') DEFAULT 'pending',
     reported_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -68,9 +69,9 @@ CREATE TABLE attachments (
 CREATE TABLE status_logs (
     id          INT AUTO_INCREMENT PRIMARY KEY,
     incident_id INT NOT NULL,
-    changed_by  INT NOT NULL,
-    old_status  ENUM('pending','in_progress','resolved','closed'),
-    new_status  ENUM('pending','in_progress','resolved','closed') NOT NULL,
+    changed_by  INT NULL,
+    old_status  ENUM('pending','in_progress','resolved','closed','rejected'),
+    new_status  ENUM('pending','in_progress','resolved','closed','rejected') NOT NULL,
     remarks     TEXT,
     changed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE,
@@ -88,6 +89,18 @@ CREATE TABLE responses (
     responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE,
     FOREIGN KEY (responder_id) REFERENCES users(id)
+);
+
+-- --------------------------------------------------------
+-- Table: banned_ips
+-- --------------------------------------------------------
+CREATE TABLE banned_ips (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    ip_address   VARCHAR(45) NOT NULL UNIQUE,
+    reason       VARCHAR(255),
+    banned_by    INT NULL,
+    banned_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (banned_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- --------------------------------------------------------

@@ -27,6 +27,27 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/functions.php';
 
 /**
+ * Check kung kasama ang IP sa Ban List
+ */
+function checkIpBan(): void {
+    global $pdo;
+    if (!isset($pdo)) {
+        require_once __DIR__ . '/../config/db.php';
+    }
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    if (str_contains($ip, ',')) {
+        $ip = trim(explode(',', $ip)[0]);
+    }
+    $stmt = $pdo->prepare("SELECT id FROM banned_ips WHERE ip_address = ?");
+    $stmt->execute([$ip]);
+    if ($stmt->fetch()) {
+        http_response_code(403);
+        die("<h2>403 Forbidden</h2><p>Pasadya at paulit-ulit na paglabag sa alituntunin. Ang iyong connection ay permanenteng na-ban sa paggamit ng system.</p>");
+    }
+}
+
+
+/**
  * Check kung logged in ang user
  */
 function isLoggedIn(): bool {
@@ -38,6 +59,7 @@ function isLoggedIn(): bool {
  * Itatapon ang user sa tamang login page base sa URL.
  */
 function requireLogin(): void {
+    checkIpBan();
     if (!isLoggedIn()) {
         $url = $_SERVER['REQUEST_URI'] ?? '';
         
@@ -55,6 +77,7 @@ function requireLogin(): void {
  * Strict role checking (Admin, Responder, Citizen)
  */
 function requireRole(string|array $allowedRoles): void {
+    checkIpBan();
     requireLogin();
     
     $allowedRoles = (array) $allowedRoles;

@@ -273,20 +273,28 @@ $error   = $_GET['error']   ?? '';
             </div>
             <?php endif; ?>
 
-            <!-- Attachments -->
+            <!-- Evidences (Attachments) -->
             <?php if ($attachments): ?>
             <div class="card-c">
                 <div class="card-h">
-                    <i class="bi bi-images"></i> Mga Larawan
-                    <span style="font-size:11px;color:var(--muted);font-weight:400;">(<?= count($attachments) ?>)</span>
+                    <i class="bi bi-folder2-open"></i> Mga Ebidensya
+                    <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px;">(<?= count($attachments) ?>)</span>
                 </div>
                 <div class="card-b">
-                    <div class="photo-grid">
+                    <div class="d-flex flex-wrap gap-3 align-items-start">
                         <?php foreach ($attachments as $a): ?>
-                            <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
-                                <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>"
-                                     class="photo-thumb" alt="photo">
-                            </a>
+                            <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
+                                <div style="max-width: 250px; flex: 1 1 200px;">
+                                    <video controls class="rounded border shadow-sm" style="width: 100%; max-height: 200px; background: #000;">
+                                        <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
+                                        Hindi compatible ang video sa browser mo.
+                                    </video>
+                                </div>
+                            <?php else: ?>
+                                <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
+                                    <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="photo-thumb shadow-sm" alt="photo">
+                                </a>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
@@ -454,6 +462,14 @@ $error   = $_GET['error']   ?? '';
 <?php if ($incident['latitude'] && $incident['longitude']): ?>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
+// Fix Leaflet broken default icons when pulling from CDN
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
+});
+
 var map = L.map('map', { zoomControl: true, dragging: true, scrollWheelZoom: false })
            .setView([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>], 16);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',

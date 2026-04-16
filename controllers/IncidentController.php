@@ -110,18 +110,23 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $isDuplicate = ($duplicate && $forceProceed) ? 1 : 0;
     $duplicateOf = ($duplicate && $forceProceed) ? $duplicate['id'] : null;
 
+    $citezIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    if (str_contains($citezIp, ',')) {
+        $citezIp = trim(explode(',', $citezIp)[0]);
+    }
+
     // Insert incident
     $stmt = $pdo->prepare("
         INSERT INTO incidents
             (reporter_id, category_id, title, description,
              location, latitude, longitude, severity, status,
-             tracking_number, is_duplicate, duplicate_of)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+             tracking_number, is_duplicate, duplicate_of, ip_address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
     ");
     $stmt->execute([
         $user['id'], $cat, $title, $desc,
         $location, $lat, $lng, $severity,
-        $tracking, $isDuplicate, $duplicateOf
+        $tracking, $isDuplicate, $duplicateOf, $citezIp
     ]);
     $incidentId = $pdo->lastInsertId();
 
@@ -129,17 +134,17 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $model = new Incident();
     $model->processNewIncident($incidentId, $cat, $severity);
 
-    // Photo uploads (with strict MIME type + magic byte validation)
-    if (!empty($_FILES['photos']['name'][0])) {
+    // Media uploads (Photos/Videos with strict MIME type + magic byte validation)
+    if (!empty($_FILES['evidence']['name'][0])) {
         $uploadDir = __DIR__ . '/../uploads/';
-        foreach ($_FILES['photos']['tmp_name'] as $i => $tmp) {
-            if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) continue;
+        foreach ($_FILES['evidence']['tmp_name'] as $i => $tmp) {
+            if ($_FILES['evidence']['error'][$i] !== UPLOAD_ERR_OK) continue;
 
-            $check = validateUploadedImage($tmp, $_FILES['photos']['name'][$i]);
+            $check = validateUploadedMedia($tmp, $_FILES['evidence']['name'][$i]);
             if (!$check['valid']) {
                 // Skip invalid file silently — or log it
                 logAudit($pdo, $user['id'], 'upload_rejected', 'incident', $incidentId,
-                    'File rejected: ' . $_FILES['photos']['name'][$i] . ' — ' . $check['error']);
+                    'File rejected: ' . $_FILES['evidence']['name'][$i] . ' — ' . $check['error']);
                 continue;
             }
 
@@ -150,7 +155,7 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     VALUES (?, ?, ?, ?)
                 ")->execute([
                     $incidentId,
-                    $_FILES['photos']['name'][$i],
+                    $_FILES['evidence']['name'][$i],
                     'uploads/' . $filename,
                     $check['mime'], // Server-detected MIME, NOT client-supplied
                 ]);
