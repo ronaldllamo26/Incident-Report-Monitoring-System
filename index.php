@@ -1537,5 +1537,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- AI Assistant Bubble Script -->
 <script src="/irms/assets/js/qc_ai_bubble.js"></script>
+    <!-- ── Privacy Consent Overlay (Standard for PWA/Mobile) ── -->
+    <div id="privacy-consent-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:999999; backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; width:100%; max-width:400px; border-radius:24px; padding:32px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center;">
+            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" style="width:80px; margin-bottom:20px;" alt="QC Logo">
+            <h3 style="color:#0f172a; font-weight:800; margin-bottom:12px;">Maligayang Pagdating!</h3>
+            <p style="color:#64748b; font-size:14px; margin-bottom:24px;">
+                Upang maprotektahan ang iyong impormasyon alinsunod sa <strong>Data Privacy Act of 2012</strong>, kailangan naming makuha ang iyong pagsang-ayon sa aming Privacy Policy bago gamitin ang QC-ALERTO app.
+            </p>
+            <div style="background:#f8fafc; border-radius:12px; padding:16px; margin-bottom:24px; text-align:left;">
+                <div style="font-size:12px; color:#1e293b; margin-bottom:8px;"><i class="bi bi-check-circle-fill text-success me-2"></i> Protektado ang iyong personal data.</div>
+                <div style="font-size:12px; color:#1e293b; margin-bottom:8px;"><i class="bi bi-check-circle-fill text-success me-2"></i> GPS location ay gagamitim lamang sa dispatch.</div>
+                <div style="font-size:12px; color:#1e293b;"><i class="bi bi-check-circle-fill text-success me-2"></i> Secure ang pag-upload ng ebidensya.</div>
+            </div>
+            <button onclick="agreeToPrivacy()" style="width:100%; background:#2563eb; color:#fff; border:none; padding:14px; border-radius:12px; font-weight:700; cursor:pointer; margin-bottom:12px;">
+                Sumasang-ayon ako (I Agree)
+            </button>
+            <a href="/irms/public/privacy.php" target="_blank" style="font-size:13px; color:#64748b; text-decoration:none;">
+                Basahin ang buong Privacy Policy
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function agreeToPrivacy() {
+            localStorage.setItem('qc_privacy_agreed', 'true');
+            document.getElementById('privacy-consent-overlay').style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (!localStorage.getItem('qc_privacy_agreed')) {
+                    document.getElementById('privacy-consent-overlay').style.display = 'flex';
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>

@@ -17,13 +17,17 @@ if (!$incident) {
 // ── AUTO-ESCALATION LOGIC ─────────────────────────────
 $sla = $model->getSlaStatus($incident);
 if ($sla['status'] === 'breached' && $incident['escalated'] == 0) {
-    $model->markEscalated($id);
-    // Log escalation
-    $pdo->prepare("INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks) 
-                   VALUES (?, NULL, ?, ?, '⚠️ Auto-Escalated: Deadline exceeded without resolution.')")
-        ->execute([$id, $incident['status'], $incident['status']]);
-    $incident['escalated'] = 1; // Sync local variable
-    $incident['sla_breached'] = 1;
+    try {
+        $model->markEscalated($id);
+        // Log escalation
+        $pdo->prepare("INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks) 
+                       VALUES (?, NULL, ?, ?, '⚠️ Auto-Escalated: Deadline exceeded without resolution.')")
+            ->execute([$id, $incident['status'], $incident['status']]);
+        $incident['escalated'] = 1; // Sync local variable
+        $incident['sla_breached'] = 1;
+    } catch (Exception $e) {
+        error_log("Auto-Escalation Error: " . $e->getMessage());
+    }
 }
 // ──────────────────────────────────────────────────────
 

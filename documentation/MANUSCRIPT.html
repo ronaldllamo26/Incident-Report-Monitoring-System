@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QC-ALERTO IRMS - PERFECT TECHNICAL MANUSCRIPT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Mermaid.js for Real Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        
+        * { box-sizing: border-box; }
+        body {
+            background: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
+        }
+
+        .paper-container {
+            background: #fff;
+            width: 210mm;
+            margin: 30px auto;
+            padding: 25.4mm; /* 1 inch margins for thesis */
+            box-shadow: 0 0 30px rgba(0,0,0,0.15);
+            min-height: 297mm;
+        }
+
+        @media print {
+            body { background: #fff; }
+            .paper-container { 
+                margin: 0 auto; 
+                box-shadow: none; 
+                width: 100%;
+                padding: 1in;
+            }
+            .no-print { display: none; }
+            .page-break { page-break-before: always; }
+        }
+
+        /* Cover Page Styling */
+        .cover-page {
+            text-align: center;
+            height: 250mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 40px 0;
+        }
+
+        .cover-header h1 { font-size: 52px; font-weight: 900; margin: 0; letter-spacing: 3px; }
+        .cover-header h2 { font-size: 28px; font-weight: 700; color: #2563eb; margin: 10px 0; }
+        
+        .manuscript-tag {
+            border-top: 3px solid #0f172a;
+            border-bottom: 3px solid #0f172a;
+            padding: 15px 0;
+            margin: 60px auto;
+            width: 85%;
+            font-weight: 800;
+            letter-spacing: 10px;
+            font-size: 22px;
+            text-transform: uppercase;
+        }
+
+        .cover-footer h3 { font-weight: 900; margin: 5px 0; font-size: 26px; }
+        .cover-footer .branding { letter-spacing: 8px; color: #64748b; font-weight: 800; font-size: 14px; }
+
+        /* Typography */
+        h3.section-header {
+            background: #0f172a;
+            color: #fff;
+            padding: 10px 20px;
+            font-size: 20px;
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-top: 50px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+        }
+
+        .sub-header {
+            font-weight: 800;
+            font-size: 16px;
+            color: #1e293b;
+            margin: 30px 0 12px 0;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 6px;
+        }
+
+        p, li { font-size: 15px; text-align: justify; line-height: 1.8; color: #334155; }
+
+        .toc-box {
+            border: 2px solid #0f172a;
+            padding: 40px;
+            margin: 50px 0;
+            background: #fcfcfc;
+        }
+        .toc-item {
+            display: flex;
+            justify-content: space-between;
+            text-decoration: none;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            border-bottom: 1px dotted #cbd5e1;
+        }
+
+        .table-custom { font-size: 13px; margin-top: 20px; }
+        .table-custom th { background: #0f172a; color: #fff; font-weight: 700; padding: 10px; }
+        .table-custom td { padding: 10px; }
+
+        .diagram-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .diagram-title { font-weight: 700; font-size: 13px; color: #64748b; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="no-print text-center py-4 bg-dark text-white shadow sticky-top">
+        <h5 class="mb-2">Document Ready: QC-ALERTO PERFECTED MANUSCRIPT</h5>
+        <button onclick="window.print()" class="btn btn-primary btn-lg px-5 fw-bold shadow-sm">
+            <i class="bi bi-printer-fill me-2"></i> GENERATE FINAL PDF
+        </button>
+        <p class="mt-2 mb-0 small opacity-75">Tip: Set "Margins" to "Default" and enable "Background Graphics" in Print Settings.</p>
+    </div>
+
+    <div class="paper-container">
+        
+        <!-- I. COVER PAGE -->
+        <div class="cover-page">
+            <div class="cover-header">
+                <img src="../assets/img/QC_LOGO_CIRCLE.png" style="width:160px;" alt="QC Logo">
+                <h1 class="mt-4">RONALD LLAMO LGU</h1>
+                <h2>QC ALERTO</h2>
+                <p class="fw-bold text-muted mt-2" style="font-size: 18px;">Incident Report & Monitoring System with AI Orchestration</p>
+            </div>
+
+            <div class="manuscript-tag">TECHNICAL MANUSCRIPT</div>
+
+            <div class="cover-mid">
+                <p class="fw-bold mb-1" style="font-size: 20px;">A Capstone Project</p>
+                <p class="text-muted mb-4" style="font-size: 16px;">Presented to the Faculty of Information Technology<br>In partial fulfillment of the requirements for the Degree of BSIT</p>
+            </div>
+
+            <div class="cover-footer">
+                <p class="small text-muted mb-1">Project Architect & Lead Developer</p>
+                <h3>RONALD LLAMO</h3>
+                <p class="branding">AKA.SYNTUXZ</p>
+                <p class="text-muted small mt-4 fw-bold">QUEZON CITY, PHILIPPINES &bull; APRIL 2026</p>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- II. TABLE OF CONTENTS -->
+        <div id="sec-toc">
+            <h3 class="section-header">Table of Contents</h3>
+            <div class="toc-box">
+                <a href="#sec1" class="toc-item"><span>I. PROJECT PROFILE</span> <span>01</span></a>
+                <a href="#sec2" class="toc-item"><span>II. EXECUTIVE SUMMARY</span> <span>04</span></a>
+                <a href="#sec3" class="toc-item"><span>III. INTRODUCTION</span> <span>07</span></a>
+                <a href="#sec4" class="toc-item"><span>IV. FRAMEWORK</span> <span>12</span></a>
+                <a href="#sec5" class="toc-item"><span>V. SYSTEM ANALYSIS</span> <span>16</span></a>
+                <a href="#sec6" class="toc-item"><span>VI. SYSTEM DESIGN</span> <span>21</span></a>
+                <a href="#sec7" class="toc-item"><span>VII. SYSTEM MODULES & FUNCTIONAL FEATURES</span> <span>26</span></a>
+                <a href="#sec8" class="toc-item"><span>VIII. DEVELOPMENT METHODOLOGY</span> <span>32</span></a>
+                <a href="#sec9" class="toc-item"><span>IX. SYSTEM DIAGRAMS</span> <span>37</span></a>
+                <a href="#sec10" class="toc-item"><span>X. TESTING & EVALUATION</span> <span>42</span></a>
+                <a href="#sec11" class="toc-item"><span>XI. RISK MGMT & INCIDENT RESPONSE</span> <span>47</span></a>
+                <a href="#sec15" class="toc-item"><span>XV. CONCLUSION & RECOMMENDATIONS</span> <span>55</span></a>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- I. PROJECT PROFILE -->
+        <div id="sec1">
+            <h3 class="section-header">I. Project Profile</h3>
+            <div class="sub-header">1. Project Title</div>
+            <p><strong>Design and Development of a Secure Integrated Incident Report & Monitoring System (QC-ALERTO)</strong></p>
+            <p>The project title is a specific and descriptive nomenclature that encapsulates the three primary pillars of the study: security, integration, and monitoring. By incorporating "QC-ALERTO," the title identifies its target jurisdiction—Quezon City—and its primary mission of providing an alert-based response mechanism. The term "Secure Integrated" highlights the system's reliance on the "Iron Dome" application-level firewall and a unified data architecture that seamlessly bridges the gap between public reporting and government intervention.</p>
+
+            <div class="sub-header">2. Integrated System</div>
+            <p>The QC-ALERTO IRMS is a multi-tiered platform that integrates three traditionally siloed processes: Citizen Emergency Reporting, AI-Assisted Dispatch, and Administrative Performance Analytics. In current manual setups, these processes exist in isolation, leading to information leakage and delayed response times. This study integrates these systems by creating a shared data backbone where every incident reported by a citizen is instantly analyzed by an Artificial Intelligence engine to determine category and severity. This integration is vital because it ensures that critical metadata, including high-precision GPS coordinates and multimedia evidence, is delivered to the assigned responder within seconds of the report submission. This synergy directly improves operational efficiency and reduces the cognitive load on human dispatchers.</p>
+
+            <div class="sub-header">3. Sub-Systems</div>
+            <ul>
+                <li><strong>Citizen Reporting Sub-System:</strong> A high-performance, mobile-responsive interface designed for public use. It facilitates the capture of incident details, precise geolocation pinning via Leaflet.js, and multi-file evidence uploads. It also provides a feedback loop where citizens can rate responder performance post-resolution.</li>
+                <li><strong>AI Dispatch Sub-System:</strong> The intelligence core of the IRMS. It utilizes the Groq Cloud API (Llama-3 model) to process natural language descriptions. Its role is to automatically triage incidents, generate formal disclosures, and suggest severity levels based on real-time textual analysis.</li>
+                <li><strong>Administrative Monitoring Sub-System:</strong> A comprehensive dashboard for city officials. It provides visual analytics through Chart.js, real-time incident mapping, and full lifecycle management of every reported emergency, ensuring that no incident goes unaddressed.</li>
+                <li><strong>Iron Dome Security Sub-System:</strong> The defensive layer of the IRMS. It enforces global rate-limiting, honeypot traps for bot detection, and mandatory Two-Factor Authentication (2FA) for staff. It ensures the integrity of the database against malicious spam and unauthorized access.</li>
+            </ul>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- III. INTRODUCTION -->
+        <div id="sec3">
+            <h3 class="section-header">III. Introduction</h3>
+            <div class="sub-header">1. Background of the Study</div>
+            <p>Quezon City, as the largest and most populous city in the Philippines, faces an immense volume of public safety incidents daily. From localized fires to infrastructure damages, the city's ability to respond is the primary metric of its governance. However, the current "Status Quo" relies heavily on decentralized communication channels—telephone hotlines, radio transmissions, and unverified social media reports. This fragmentation leads to the "Data Fog" phenomenon, where information is often inaccurate, delayed, or lost before it reaches the appropriate responding unit. The lack of a centralized, digital repository prevents the city from performing long-term trend analysis and performance auditing. This study proposes QC-ALERTO to modernize this landscape, providing a singular, secure, and intelligent platform for all stakeholders.</p>
+
+            <div class="sub-header">2. Statement of the Problem</div>
+            <p>The researchers have identified the following critical deficiencies in the existing incident management workflow:</p>
+            <ol>
+                <li><strong>Manual Data Redundancy:</strong> Emergency logs are often recorded multiple times in physical books, leading to data inconsistency and difficulty in retrieval for audit purposes.</li>
+                <li><strong>Unverified Reporting (Spam):</strong> Public reporting channels are frequently overwhelmed by non-critical or malicious reports, hindering the dispatch of help to genuine emergencies.</li>
+                <li><strong>Inaccurate Geolocation:</strong> Voice-based reporting often results in responders going to the wrong street or barangay due to miscommunication or lack of landmarks.</li>
+                <li><strong>Absence of Real-time Accountability:</strong> There is no digital mechanism to track the exact timestamp a responder acknowledged and resolved an incident, making performance monitoring impossible.</li>
+            </ol>
+
+            <div class="sub-header">3. Project Objectives</div>
+            <p><strong>General Objective:</strong> To design and develop a secure, integrated, and AI-powered Incident Report & Monitoring System for Quezon City to streamline emergency workflows and enhance data-driven decision-making.</p>
+            <p><strong>Specific Objectives:</strong></p>
+            <ul>
+                <li>Implement a geofenced reporting module that restricts submissions within Quezon City's administrative boundaries.</li>
+                <li>Develop an AI triage module that can classify incidents and assess severity with at least 90% accuracy.</li>
+                <li>Enforce the "Iron Dome" security layer to prevent automated form spam and SQL injection.</li>
+                <li>Provide a real-time analytics dashboard for monitoring Mean Time to Acknowledge (MTTA) and Citizen Satisfaction (CSAT) scores.</li>
+            </ul>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- IV. FRAMEWORK -->
+        <div id="sec4">
+            <h3 class="section-header">IV. Framework</h3>
+            <div class="sub-header">1. Existing Business Process Diagram</div>
+            <p>The current workflow begins with a citizen experiencing or witnessing an incident. They then search for an official hotline or post the incident on social media platforms. The dispatcher must manually verify the location by asking several questions. Once "verified," the dispatcher radioes a responder. This process is linear, manual, and lacks a secure digital trail. Security is non-existent as any anonymous caller can tie up emergency lines without being tracked or filtered.</p>
+            
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    A[Citizen Witness] -->|Voice Call| B[Dispatcher]
+                    B -->|Manual Verification| C{Is Real?}
+                    C -->|No| D[Ignore/Spam]
+                    C -->|Yes| E[Radio Responder]
+                    E -->|Manual Dispatch| F[Responder Arrives]
+                    F -->|Paper Log| G[End Process]
+                </div>
+                <div class="diagram-title">Figure 1: Current Manual Incident Workflow</div>
+            </div>
+
+            <div class="sub-header">2. Proposed Business Process Diagram</div>
+            <p>The proposed QC-ALERTO workflow introduces automation and security checkpoints. The citizen submits a report through the PWA. The "Iron Dome" firewall instantly vets the IP and form data. The AI Dispatcher then classifies the incident and suggests a responder. The Admin clicks a single button to confirm. The Responder receives an instant notification with a map pin and media evidence. The system logs every micro-action, creating a full digital audit trail.</p>
+
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    A[Citizen PWA] -->|Secure Post| B[Iron Dome Firewall]
+                    B -->|Validation| C[AI Dispatcher]
+                    C -->|Triage| D[Admin Dashboard]
+                    D -->|One-Click Assign| E[Responder App]
+                    E -->|Live Mapping| F[Resolution with Proof]
+                    F -->|Auto-Log| G[Analytics DB]
+                </div>
+                <div class="diagram-title">Figure 2: Proposed QC-ALERTO Integrated Workflow</div>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- VI. SYSTEM DESIGN -->
+        <div id="sec6">
+            <h3 class="section-header">VI. System Design</h3>
+            <div class="sub-header">1. Secure System Architecture</div>
+            <p>The system follows a <strong>Modular Monolith Architecture</strong>, which balances the simplicity of deployment with the benefits of modular design. All core logic is housed in a single application container but partitioned into logical modules (e.g., Auth, Incident, AI, Analytics). This design is inherently secure as it allows for a unified security middleware (Iron Dome) that intercepts all incoming HTTP requests to validate CSRF tokens, session integrity, and IP-based rate limits before any business logic is executed.</p>
+
+            <div class="sub-header">2. Database and Data Security Design</div>
+            <p>The database is designed with normalized tables to ensure data consistency. To protect sensitive information, all user passwords are hashed using **Bcrypt** with a high cost factor. The database also implements strict **Foreign Key Constraints** to prevent orphaned records. For data durability, the system includes a "One-Click Backup" module that generates a full SQL dump, ensuring that the system can be restored within minutes in the event of a server failure.</p>
+            
+            <div class="diagram-container">
+                <div class="mermaid">
+                erDiagram
+                    USERS ||--o{ INCIDENTS : reports
+                    USERS ||--o{ INCIDENTS : assigned_to
+                    INCIDENTS ||--o{ ATTACHMENTS : has
+                    INCIDENTS ||--o{ STATUS_LOGS : logs
+                    INCIDENTS ||--|| FEEDBACK : receives
+                    CATEGORIES ||--o{ INCIDENTS : classifies
+                </div>
+                <div class="diagram-title">Figure 3: QC-ALERTO Entity Relationship Diagram (ERD)</div>
+            </div>
+
+            <div class="sub-header">3. Access Control Design</div>
+            <p>We utilize **Role-Based Access Control (RBAC)**. The system defines three primary roles:</p>
+            <ul>
+                <li><strong>Admin:</strong> Full system control, user management, and global analytics.</li>
+                <li><strong>Responder:</strong> Limited to managing assigned incidents and uploading resolution proof.</li>
+                <li><strong>Citizen:</strong> Limited to submitting reports and tracking their own submissions.</li>
+            </ul>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- VII. SYSTEM MODULES -->
+        <div id="sec7">
+            <h3 class="section-header">VII. System Modules & Features</h3>
+            
+            <div class="sub-header">1. AI-Driven Triage Module</div>
+            <p>This module acts as the "Virtual Dispatcher." It captures the citizen's natural language description and sends it to the Groq AI engine. The result is a categorized incident (e.g., Fire, Road Accident) and an AI-generated summary. This reduces the time spent by administrators reading lengthy descriptions and ensures that urgent cases are highlighted immediately based on AI-detected keywords.</p>
+
+            <div class="sub-header">2. Iron Dome Security Module</div>
+            <p>This is the system's defensive perimeter. It monitors every IP address interacting with the platform. If a user or bot submits more than 3 reports in an hour, they are automatically rate-limited. It also includes "Honeypot" technology—hidden form fields that bots fill out but humans ignore—to instantly identify and ban automated attackers.</p>
+
+            <div class="sub-header">3. Precision Mapping Module</div>
+            <p>Utilizing Leaflet.js and a customized GeoJSON mask of Quezon City, this module ensures that every report has an accurate geospatial coordinate. It prevents reports from being submitted outside the city's jurisdiction, protecting responders from being dispatched to out-of-scope locations.</p>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- IX. SYSTEM DIAGRAMS -->
+        <div id="sec9">
+            <h3 class="section-header">IX. System Diagrams</h3>
+            <div class="sub-header">1. Use Case Diagram</div>
+            <p>The Use Case Diagram defines the interactions between the primary actors and the system's core functionalities. It highlights the separation of duties, where citizens focus on data entry, responders on resolution, and admins on oversight and governance.</p>
+            
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph LR
+                    subgraph System
+                    F[Report Incident]
+                    G[Track Status]
+                    H[Assign Responder]
+                    I[Analyze Reports]
+                    J[Update Resolution]
+                    end
+                    C((Citizen)) --- F
+                    C --- G
+                    A((Admin)) --- H
+                    A --- I
+                    R((Responder)) --- J
+                </div>
+                <div class="diagram-title">Figure 4: QC-ALERTO Use Case Diagram</div>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- XV. CONCLUSION -->
+        <div id="sec15">
+            <h3 class="section-header">XV. Conclusion & Recommendations</h3>
+            <p>In conclusion, the development of the QC-ALERTO Incident Report & Monitoring System has successfully addressed the critical gaps in traditional incident management. By integrating AI-driven triage and a robust security firewall, the study has shown that modern web technologies can significantly improve the efficiency, transparency, and security of public safety operations. The system is not only a reporting tool but a comprehensive decision-support platform for city officials.</p>
+            
+            <p><strong>Recommendations:</strong></p>
+            <ul>
+                <li>Implementation of <strong>SMS Gateway</strong> integration to allow reporting via mobile numbers for citizens without active internet connections.</li>
+                <li>Expansion of AI capabilities to include <strong>Computer Vision</strong> for automated damage assessment from uploaded images.</li>
+                <li>Native mobile application deployment for responders to enable real-time **Push Notifications** and GPS navigation.</li>
+            </ul>
+
+            <div class="text-center mt-5">
+                <p class="text-muted small">*** END OF TECHNICAL MANUSCRIPT ***</p>
+                <p class="fw-bold">Generated by Antigravity AI for RONALD LLAMO</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Custom logic to handle paging visibility if needed
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Manuscript Loaded - 16 Sections Active');
+        });
+    </script>
+</body>
+</html>

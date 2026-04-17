@@ -1,5 +1,5 @@
 <?php
-// QC-ALERTO AI Configuration
+// QC-ALERTO AI Configuration Template
 // Visit https://aistudio.google.com/ for Gemini (Secondary Fallback)
 // Visit https://console.groq.com/ for Groq (Primary High-Speed)
 

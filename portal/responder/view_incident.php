@@ -21,13 +21,6 @@ $curSt  = $incident['status'];
 $curSev = $incident['severity'];
 
 $stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'closed' => 'Closed'];
-$stStyle = [
-    'pending'     => 'background:#fef3c7;color:#92400e;',
-    'in_progress' => 'background:#dbeafe;color:#1e40af;',
-    'resolved'    => 'background:#dcfce7;color:#166534;',
-    'closed'      => 'background:#f3f4f6;color:#4b5563;',
-];
-$sevColor = ['low' => '#16a34a', 'medium' => '#d97706', 'high' => '#ea580c', 'critical' => '#CE1126'];
 $sevLabel = ['low' => 'Low', 'medium' => 'Medium', 'high' => 'High', 'critical' => 'Critical'];
 
 $success = $_GET['success'] ?? '';
@@ -42,494 +35,340 @@ $error   = $_GET['error']   ?? '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --qc-blue: #1e293b;
-            --qc-red:  #CE1126;
-            --bg:      #f4f6f9;
-            --border:  #e2e8f0;
-            --text:    #1e293b;
-            --muted:   #64748b;
+            --qc-blue:   #0f172a;
+            --qc-navy:   #1e293b;
+            --qc-accent: #3b82f6;
+            --qc-gold:   #fbbf24;
+            --qc-red:    #ef4444;
+            --glass:     rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim:  #94a3b8;
         }
-        * { box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
 
-        /* Topbar */
-        .topbar { background: var(--qc-blue); border-bottom: 3px solid var(--qc-red);
-                  position: sticky; top: 0; z-index: 100; }
-        .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px;
-                        display: flex; align-items: center; justify-content: space-between; height: 56px; }
-        .brand { font-size: 16px; font-weight: 700; color: #fff; text-decoration: none;
-                 display: flex; align-items: center; gap: 10px; }
-        .brand img { height: 30px; width: 30px; object-fit: contain; }
-        .role-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
-                      color: #fff; font-size: 10px; font-weight: 600; padding: 2px 8px;
-                      border-radius: 4px; letter-spacing: 0.8px; text-transform: uppercase; }
-        .back-btn { font-size: 12px; color: rgba(255,255,255,0.85); text-decoration: none;
-                    display: flex; align-items: center; gap: 5px; padding: 5px 12px;
-                    border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; transition: all 0.2s; }
-        .back-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-
-        /* Incident title bar */
-        .inc-bar {
-            background: #fff; border-bottom: 1px solid var(--border); padding: 18px 0;
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 50px;
         }
-        .inc-bar-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-        .inc-ref { font-size: 11px; color: var(--muted); font-weight: 600;
-                   text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-        .inc-title { font-size: 20px; font-weight: 700; color: var(--text); margin: 0 0 10px; }
-        .badge-sev { padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .badge-st  { padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .cat-tag  { padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 500;
-                    background: #f1f5f9; color: #374151; }
 
-        .main-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-
-        /* Cards */
-        .card-c { background: #fff; border: 1px solid var(--border); border-radius: 10px;
-                  margin-bottom: 18px; overflow: hidden; }
-        .card-h { padding: 13px 18px; border-bottom: 1px solid #f1f5f9;
-                  font-size: 13px; font-weight: 600; color: var(--text);
-                  display: flex; align-items: center; gap: 8px; background: #fafbfc; }
-        .card-h i { color: var(--qc-blue); }
-        .card-b { padding: 18px; }
-
-        /* Map */
-        #map { height: 220px; border-radius: 8px; }
-
-        /* Photos */
-        .photo-grid { display: flex; flex-wrap: wrap; gap: 10px; }
-        .photo-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px;
-                       border: 1px solid var(--border); cursor: pointer; transition: transform 0.15s; }
-        .photo-thumb:hover { transform: scale(1.05); border-color: var(--qc-blue); }
-
-        /* Status action panel */
-        .action-card { background: #fff; border: 1px solid var(--border); border-radius: 10px;
-                       margin-bottom: 18px; overflow: hidden; }
-        .action-h { padding: 13px 18px; border-bottom: 1px solid var(--border);
-                    font-size: 13px; font-weight: 600; color: var(--text); background: #fafbfc; }
-        .action-b { padding: 18px; }
-
-        .btn-acknowledge {
-            width: 100%; padding: 11px; border-radius: 8px; border: none;
-            background: #d97706; color: #fff; font-size: 14px; font-weight: 600;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            gap: 7px; transition: background 0.2s;
+        /* ── Header ── */
+        .top-nav {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 16px 32px;
+            position: sticky; top: 0; z-index: 9999;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .btn-acknowledge:hover { background: #b45309; }
-        .btn-resolve {
-            width: 100%; padding: 11px; border-radius: 8px; border: none;
-            background: var(--qc-blue); color: #fff; font-size: 14px; font-weight: 600;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            gap: 7px; transition: background 0.2s;
+        .back-btn {
+            color: var(--text-dim); text-decoration: none; font-size: 14px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px; transition: all 0.3s;
         }
-        .btn-resolve:hover { background: #111827; }
+        .back-btn:hover { color: #fff; transform: translateX(-5px); }
 
-        .textarea-c { width: 100%; padding: 9px 12px; border: 1px solid var(--border);
-                      border-radius: 8px; font-size: 13px; outline: none; resize: vertical;
-                      font-family: inherit; transition: border-color 0.2s; }
-        .textarea-c:focus { border-color: var(--qc-blue); }
+        .incident-header {
+            background: linear-gradient(to bottom, rgba(30, 41, 59, 0.5), transparent);
+            padding: 48px 32px;
+        }
+        .inc-badge-group { display: flex; gap: 10px; margin-bottom: 16px; }
+        .badge-c {
+            padding: 6px 14px; border-radius: 100px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;
+        }
+        .badge-sev-critical { background: rgba(239, 68, 68, 0.1); color: var(--qc-red); border: 1px solid rgba(239, 68, 68, 0.2); }
+        .badge-sev-high { background: rgba(251, 191, 36, 0.1); color: var(--qc-gold); border: 1px solid rgba(251, 191, 36, 0.2); }
+        .badge-st-progress { background: rgba(59, 130, 246, 0.1); color: var(--qc-accent); border: 1px solid rgba(59, 130, 246, 0.2); }
 
-        /* Info rows */
-        .info-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
-        .info-label { font-size: 11px; font-weight: 600; color: var(--muted); min-width: 72px;
-                      text-transform: uppercase; letter-spacing: 0.4px; padding-top: 1px; }
-        .info-val { font-size: 13px; color: var(--text); }
+        .inc-title { font-size: 32px; font-weight: 800; margin: 0; letter-spacing: -1px; }
+        .inc-meta { color: var(--text-dim); font-size: 14px; margin-top: 8px; display: flex; align-items: center; gap: 20px; }
 
-        /* Responses */
-        .chat-item { display: flex; gap: 10px; margin-bottom: 14px; }
-        .chat-av { width: 32px; height: 32px; background: #f0f4ff; border-radius: 50%;
-                   display: flex; align-items: center; justify-content: center;
-                   font-size: 12px; font-weight: 700; color: var(--qc-blue); flex-shrink: 0; }
-        .chat-bubble { flex: 1; background: #f8fafc; border: 1px solid var(--border);
-                       border-radius: 0 8px 8px 8px; padding: 10px 13px; }
-        .chat-name { font-size: 12px; font-weight: 600; color: var(--qc-blue); margin-bottom: 3px; }
-        .chat-msg  { font-size: 13px; color: var(--text); line-height: 1.5; }
-        .chat-time { font-size: 11px; color: var(--muted); margin-top: 5px; }
+        /* ── Main Layout ── */
+        .content-grid { display: grid; grid-template-columns: 1fr 400px; gap: 32px; padding: 0 32px; margin-top: -20px; }
 
-        /* Timeline */
-        .timeline { position: relative; padding-left: 26px; }
-        .timeline::before { content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px;
-                             width: 2px; background: var(--border); }
-        .tl-item { position: relative; margin-bottom: 18px; }
-        .tl-dot { position: absolute; left: -22px; top: 4px; width: 12px; height: 12px;
-                  border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 2px currentColor; }
-        .tl-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-        .tl-time  { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
-        .tl-note  { font-size: 12px; color: #4b5563; background: #f8fafc;
-                    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .card-title i { color: var(--qc-accent); }
 
-        /* Alerts */
-        .alert-ok  { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a;
-                     border-radius: 8px; padding: 11px 14px; font-size: 13px; color: #166534;
-                     display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-        .alert-err { background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid var(--qc-red);
-                     border-radius: 8px; padding: 11px 14px; font-size: 13px; color: #991b1b;
-                     display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+        /* ── Details ── */
+        .detail-row { display: grid; grid-template-columns: 140px 1fr; gap: 16px; margin-bottom: 16px; font-size: 14px; }
+        .detail-lbl { color: var(--text-dim); font-weight: 500; }
+        .detail-val { font-weight: 600; color: #fff; }
 
-        /* Send btn */
-        .btn-send { background: var(--qc-blue); color: #fff; border: none; padding: 8px 18px;
-                    border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer;
-                    display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; }
-        .btn-send:hover { background: #111827; }
+        #map { height: 300px; border-radius: 20px; border: 1px solid var(--glass-border); margin-top: 20px; }
 
-        /* Reporter card */
-        .reporter-row { display: flex; align-items: center; gap: 12px; }
-        .reporter-av { width: 40px; height: 40px; background: #f0f4ff; border-radius: 50%;
-                       display: flex; align-items: center; justify-content: center;
-                       font-size: 15px; font-weight: 700; color: var(--qc-blue); }
-        .reporter-name { font-size: 14px; font-weight: 600; }
-        .reporter-detail { font-size: 12px; color: var(--muted); }
+        /* ── Photo Gallery ── */
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 16px; }
+        .gallery-item {
+            width: 100%; aspect-ratio: 1; border-radius: 16px; object-fit: cover;
+            border: 1px solid var(--glass-border); transition: all 0.3s; cursor: pointer;
+        }
+        .gallery-item:hover { transform: scale(1.05); border-color: var(--qc-accent); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
 
-        /* Resolution upload */
-        .res-upload-box { border: 2px dashed var(--border); border-radius: 8px; padding: 15px;
-                          text-align: center; background: #f8fafc; transition: all 0.2s; cursor: pointer; }
-        .res-upload-box:hover { border-color: var(--qc-blue); background: #f1f5f9; }
-        .res-upload-box i { font-size: 24px; color: var(--muted); display: block; margin-bottom: 5px; }
-        .res-upload-box span { font-size: 12px; color: var(--muted); font-weight: 500; }
-        .res-upload-box input { display: none; }
+        /* ── Action Panel ── */
+        .action-panel { position: sticky; top: 100px; }
+        .btn-main {
+            width: 100%; padding: 16px; border-radius: 16px; border: none;
+            font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-primary-c { background: var(--qc-accent); color: #fff; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3); }
+        .btn-primary-c:hover { background: #2563eb; transform: translateY(-2px); }
+        .btn-gold-c { background: var(--qc-gold); color: #000; box-shadow: 0 8px 20px rgba(251, 191, 36, 0.3); }
+        .btn-gold-c:hover { background: #f59e0b; transform: translateY(-2px); }
+
+        .form-label-c { font-size: 12px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; }
+        .input-c {
+            width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border);
+            padding: 12px 16px; border-radius: 12px; color: #fff; font-size: 14px;
+            transition: all 0.3s;
+        }
+        .input-c:focus { border-color: var(--qc-accent); outline: none; background: rgba(0,0,0,0.4); }
+
+        .upload-zone {
+            border: 2px dashed var(--glass-border); border-radius: 16px;
+            padding: 32px; text-align: center; transition: all 0.3s; cursor: pointer;
+            background: rgba(255,255,255,0.01);
+        }
+        .upload-zone:hover { border-color: var(--qc-accent); background: rgba(59, 130, 246, 0.05); }
+        .upload-zone i { font-size: 32px; color: var(--text-dim); margin-bottom: 12px; display: block; }
+
+        /* ── Timeline ── */
+        .timeline-c { padding-left: 20px; border-left: 1px solid var(--glass-border); }
+        .tl-item-c { position: relative; padding-bottom: 24px; padding-left: 24px; }
+        .tl-item-c::before { content: ''; position: absolute; left: -5.5px; top: 5px; width: 11px; height: 11px; border-radius: 50%; background: var(--qc-accent); box-shadow: 0 0 10px var(--qc-accent); }
+        .tl-date { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+        .tl-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .tl-desc { font-size: 12px; color: var(--text-dim); background: rgba(255,255,255,0.02); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); }
+
+        @media (max-width: 1024px) { .content-grid { grid-template-columns: 1fr; } .action-panel { position: static; } }
     </style>
 </head>
 <body>
 
-<!-- Topbar -->
-<nav class="topbar">
-    <div class="topbar-inner">
-        <a href="/irms/portal/responder/dashboard.php" class="brand">
-            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC">
-            QC-ALERTO
-            <span class="role-badge">Responder</span>
-        </a>
-        <div class="d-flex align-items-center gap-3">
-            <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
-            <a href="/irms/portal/responder/dashboard.php" class="back-btn">
-                <i class="bi bi-arrow-left"></i> Dashboard
-            </a>
+<nav class="top-nav">
+    <a href="/irms/portal/responder/dashboard.php" class="back-btn">
+        <i class="bi bi-arrow-left"></i> Dashboard Center
+    </a>
+    <div class="d-flex align-items-center gap-4">
+        <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+        <div style="font-size: 13px; font-weight: 600; color: var(--qc-gold);">
+            <i class="bi bi-shield-fill-check me-1"></i> Active Deployment
         </div>
     </div>
 </nav>
 
-<!-- Incident Title Bar -->
-<div class="inc-bar">
-    <div class="inc-bar-inner">
-        <div class="inc-ref">
-            Incident #<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?>
-            <?php if (!empty($incident['tracking_number'])): ?>
-                &nbsp;&middot;&nbsp; <?= htmlspecialchars($incident['tracking_number']) ?>
-            <?php endif; ?>
-        </div>
-        <h1 class="inc-title"><?= htmlspecialchars($incident['title']) ?></h1>
-        <div class="d-flex flex-wrap gap-2">
-            <span class="badge-sev" style="background:<?= $sevColor[$curSev] ?? '#64748b' ?>22;color:<?= $sevColor[$curSev] ?? '#64748b' ?>;">
-                <i class="bi bi-circle-fill me-1" style="font-size:7px;"></i>
-                <?= $sevLabel[$curSev] ?? ucfirst($curSev) ?> Severity
-            </span>
-            <span class="badge-st" style="<?= $stStyle[$curSt] ?? '' ?>">
-                <?= $stLabel[$curSt] ?? ucfirst($curSt) ?>
-            </span>
-            <span class="cat-tag">
-                <i class="bi bi-tag me-1"></i><?= htmlspecialchars($incident['category_name']) ?>
-            </span>
-        </div>
+<div class="incident-header">
+    <div class="inc-badge-group">
+        <span class="badge-c badge-sev-<?= $curSev === 'critical' || $curSev === 'high' ? 'critical' : 'high' ?>">
+            <i class="bi bi-exclamation-triangle-fill"></i> <?= $sevLabel[$curSev] ?? ucfirst($curSev) ?> Severity
+        </span>
+        <span class="badge-c badge-st-progress">
+            <i class="bi bi-activity"></i> <?= $stLabel[$curSt] ?? ucfirst($curSt) ?>
+        </span>
+    </div>
+    <h1 class="inc-title"><?= htmlspecialchars($incident['title']) ?></h1>
+    <div class="inc-meta">
+        <span><i class="bi bi-hash me-1"></i> #<?= str_pad($id, 5, '0', STR_PAD_LEFT) ?></span>
+        <span><i class="bi bi-calendar3 me-1"></i> <?= date('F j, Y — g:i A', strtotime($incident['reported_at'])) ?></span>
+        <span><i class="bi bi-tag-fill me-1"></i> <?= htmlspecialchars($incident['category_name']) ?></span>
     </div>
 </div>
 
-<div class="main-wrap">
-
-    <?php if ($success): ?>
-        <div class="alert-ok">
-            <i class="bi bi-check-circle-fill" style="flex-shrink:0;"></i>
-            <?= htmlspecialchars($success) ?>
-        </div>
-    <?php elseif ($error): ?>
-        <div class="alert-err">
-            <i class="bi bi-exclamation-circle-fill" style="flex-shrink:0;"></i>
-            <?= htmlspecialchars($error) ?>
-        </div>
-    <?php endif; ?>
-
-    <div class="row g-4">
-
-        <!-- LEFT -->
-        <div class="col-lg-8">
-
-            <!-- Details -->
-            <div class="card-c">
-                <div class="card-h"><i class="bi bi-file-text"></i> Detalye ng Insidente</div>
-                <div class="card-b">
-                    <div class="info-row">
-                        <span class="info-label">Lokasyon</span>
-                        <span class="info-val"><?= htmlspecialchars($incident['location']) ?></span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Petsa</span>
-                        <span class="info-val"><?= date('F j, Y — g:i A', strtotime($incident['reported_at'])) ?></span>
-                    </div>
-                    <?php if ($incident['resolved_at']): ?>
-                    <div class="info-row">
-                        <span class="info-label">Na-resolve</span>
-                        <span class="info-val text-success fw-semibold"><?= date('M d, Y — g:i A', strtotime($incident['resolved_at'])) ?></span>
-                    </div>
-                    <?php endif; ?>
-                    <?php if ($incident['closed_at']): ?>
-                    <div class="info-row">
-                        <span class="info-label">Na-close</span>
-                        <span class="info-val text-muted"><?= date('M d, Y — g:i A', strtotime($incident['closed_at'])) ?></span>
-                    </div>
-                    <?php endif; ?>
-                    <hr style="border-color:#f1f5f9;margin:14px 0;">
-                    <p style="font-size:14px;color:#374151;line-height:1.7;margin:0;">
-                        <?= nl2br(htmlspecialchars($incident['description'])) ?>
-                    </p>
-                </div>
+<div class="content-grid">
+    <!-- LEFT COLUMN -->
+    <div class="main-details">
+        
+        <?php if ($success): ?>
+            <div class="alert alert-success border-0 shadow-sm mb-4" style="background: rgba(34, 197, 94, 0.1); color: #22c55e; border-radius: 16px;">
+                <i class="bi bi-check-circle-fill me-2"></i> <?= htmlspecialchars($success) ?>
             </div>
+        <?php elseif ($error): ?>
+            <div class="alert alert-danger border-0 shadow-sm mb-4" style="background: rgba(239, 68, 68, 0.1); color: var(--qc-red); border-radius: 16px;">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i> <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
 
-            <!-- Map -->
+        <div class="glass-card">
+            <div class="card-title"><i class="bi bi-info-circle-fill"></i> Incident Intelligence</div>
+            <div class="detail-row">
+                <span class="detail-lbl">Location</span>
+                <span class="detail-val"><?= htmlspecialchars($incident['location']) ?></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-lbl">Description</span>
+                <span class="detail-val" style="font-weight: 400; line-height: 1.6;"><?= nl2br(htmlspecialchars($incident['description'])) ?></span>
+            </div>
+            
             <?php if ($incident['latitude'] && $incident['longitude']): ?>
-            <div class="card-c">
-                <div class="card-h"><i class="bi bi-geo-alt"></i> Lokasyon sa Mapa</div>
-                <div class="card-b" style="padding:14px;"><div id="map"></div></div>
-            </div>
+                <div id="map"></div>
             <?php endif; ?>
+        </div>
 
-            <!-- Evidences (Attachments) -->
+        <div class="glass-card">
+            <div class="card-title"><i class="bi bi-images"></i> Visual Intelligence (Evidence)</div>
             <?php if ($attachments): ?>
-            <div class="card-c">
-                <div class="card-h">
-                    <i class="bi bi-folder2-open"></i> Mga Ebidensya
-                    <span style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px;">(<?= count($attachments) ?>)</span>
-                </div>
-                <div class="card-b">
-                    <div class="d-flex flex-wrap gap-3 align-items-start">
-                        <?php foreach ($attachments as $a): ?>
-                            <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
-                                <div style="max-width: 250px; flex: 1 1 200px;">
-                                    <video controls class="rounded border shadow-sm" style="width: 100%; max-height: 200px; background: #000;">
-                                        <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
-                                        Hindi compatible ang video sa browser mo.
-                                    </video>
-                                </div>
-                            <?php else: ?>
-                                <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
-                                    <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="photo-thumb shadow-sm" alt="photo">
-                                </a>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- Respond form -->
-            <?php if (!in_array($curSt, ['resolved', 'closed'])): ?>
-            <div class="card-c">
-                <div class="card-h"><i class="bi bi-chat-dots"></i> Mag-update ng Mensahe sa Citizen</div>
-                <div class="card-b">
-                    <form action="/irms/ajax/update_status.php" method="POST">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="incident_id" value="<?= $id ?>">
-                        <input type="hidden" name="action" value="respond">
-                        <textarea name="message" class="textarea-c mb-3" rows="3" required
-                            placeholder="I-type ang iyong update para sa citizen reporter..."></textarea>
-                        <button type="submit" class="btn-send">
-                            <i class="bi bi-send"></i> Ipadala
-                        </button>
-                    </form>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <!-- Previous responses -->
-            <?php if ($responses): ?>
-            <div class="card-c">
-                <div class="card-h">
-                    <i class="bi bi-chat-left-text"></i> Mga Dati nang Response
-                    <span style="font-size:11px;color:var(--muted);font-weight:400;">(<?= count($responses) ?>)</span>
-                </div>
-                <div class="card-b">
-                    <?php foreach ($responses as $r): ?>
-                    <div class="chat-item">
-                        <div class="chat-av"><?= strtoupper(substr($r['responder_name'], 0, 1)) ?></div>
-                        <div class="chat-bubble">
-                            <div class="chat-name"><?= htmlspecialchars($r['responder_name']) ?></div>
-                            <div class="chat-msg"><?= nl2br(htmlspecialchars($r['message'])) ?></div>
-                            <div class="chat-time">
-                                <i class="bi bi-clock me-1"></i>
-                                <?= date('M j, Y — g:i A', strtotime($r['responded_at'])) ?>
-                            </div>
-                        </div>
-                    </div>
+                <div class="gallery">
+                    <?php foreach ($attachments as $a): ?>
+                        <?php if (str_starts_with($a['file_type'] ?? '', 'video/')): ?>
+                            <video controls class="gallery-item" style="width: 100%; aspect-ratio: unset; max-height: 250px; background: #000;">
+                                <source src="/irms/<?= htmlspecialchars($a['file_path']) ?>" type="<?= htmlspecialchars($a['file_type']) ?>">
+                            </video>
+                        <?php else: ?>
+                            <a href="/irms/<?= htmlspecialchars($a['file_path']) ?>" target="_blank">
+                                <img src="/irms/<?= htmlspecialchars($a['file_path']) ?>" class="gallery-item">
+                            </a>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            <?php else: ?>
+                <p class="text-center py-4 text-muted small">No visual attachments provided by the reporter.</p>
             <?php endif; ?>
-
         </div>
 
-        <!-- RIGHT -->
-        <div class="col-lg-4">
-
-            <!-- Action Panel -->
-            <?php if ($curSt !== 'closed'): ?>
-            <div class="action-card">
-                <div class="action-h"><i class="bi bi-arrow-repeat me-1" style="color:var(--qc-blue);"></i>I-update ang Status</div>
-                <div class="action-b">
-                <?php if ($curSt === 'pending'): ?>
-                    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;
-                                padding:11px 13px;margin-bottom:14px;font-size:12px;color:#92400e;">
-                        <i class="bi bi-exclamation-circle me-1"></i>
-                        Hindi pa naka-acknowledge ang incident na ito.
+        <div class="glass-card">
+            <div class="card-title"><i class="bi bi-clock-history"></i> Operational Timeline</div>
+            <div class="timeline-c">
+                <?php foreach ($logs as $log): ?>
+                <div class="tl-item-c">
+                    <div class="tl-date"><?= date('M d, Y &middot; g:i A', strtotime($log['changed_at'])) ?></div>
+                    <div class="tl-title"><?= $stLabel[$log['new_status']] ?? ucwords($log['new_status']) ?></div>
+                    <div class="tl-desc">
+                        <i class="bi bi-person-fill me-1 opacity-50"></i> <?= htmlspecialchars($log['changed_by_name'] ?: 'System Alert') ?>
+                        <?php if ($log['remarks']): ?>
+                            <p class="mt-2 mb-0" style="color: #fff;"><?= htmlspecialchars($log['remarks']) ?></p>
+                        <?php endif; ?>
                     </div>
-                    <form action="/irms/ajax/update_status.php" method="POST"
-                          onsubmit="return confirm('I-acknowledge ang incident na ito?')">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="incident_id"  value="<?= $id ?>">
-                        <input type="hidden" name="action"       value="update_status">
-                        <input type="hidden" name="old_status"   value="pending">
-                        <input type="hidden" name="new_status"   value="in_progress">
-                        <input type="hidden" name="remarks"      value="Incident acknowledged by responder.">
-                        <button type="submit" class="btn-acknowledge">
-                            <i class="bi bi-check2-circle"></i> I-Acknowledge
-                        </button>
-                    </form>
-
-                <?php elseif ($curSt === 'in_progress'): ?>
-                    <div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;
-                                padding:11px 13px;margin-bottom:14px;font-size:12px;color:#3730a3;">
-                        <i class="bi bi-info-circle me-1"></i>
-                        In Progress — i-resolve kapag naalagaan na ang insidente.
-                    </div>
-                    <form action="/irms/ajax/update_status.php" method="POST" enctype="multipart/form-data"
-                          onsubmit="return confirm('I-resolve na ang incident? Sinisiguro mo bang may kalakip na Proof of Resolution?')">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="incident_id" value="<?= $id ?>">
-                        <input type="hidden" name="action"      value="update_status">
-                        <input type="hidden" name="old_status"  value="in_progress">
-                        <input type="hidden" name="new_status"  value="resolved">
-                        <textarea name="remarks" class="textarea-c mb-3" rows="3" required
-                                  placeholder="Findings at aksyon na ginawa... (required)"></textarea>
-
-                        <div class="mb-3">
-                            <label class="info-label mb-2 d-block">Proof of Resolution (Required)</label>
-                            <label class="res-upload-box d-block" id="upload-trigger">
-                                <i class="bi bi-camera shadow-sm-hover"></i>
-                                <span id="file-label">I-upload ang Photo/Video (Proof)</span>
-                                <input type="file" name="evidence[]" id="res-files" multiple required accept="image/*,video/mp4,video/webm">
-                            </label>
-                            <div id="file-list" class="mt-2 small text-muted px-1" style="font-size:11px;"></div>
-                        </div>
-                        <button type="submit" class="btn-resolve">
-                            <i class="bi bi-check-circle"></i> I-Resolve ang Incident
-                        </button>
-                    </form>
-
-                <?php elseif ($curSt === 'resolved'): ?>
-                    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;
-                                padding:14px;text-align:center;color:#166534;">
-                        <i class="bi bi-check-circle-fill" style="font-size:24px;display:block;margin-bottom:6px;"></i>
-                        <div style="font-weight:600;font-size:13px;">Na-resolve na</div>
-                        <div style="font-size:12px;margin-top:3px;color:#4b7c58;">Hinihintay ang admin na i-close.</div>
-                    </div>
-                <?php endif; ?>
                 </div>
+                <?php endforeach; ?>
             </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: ACTION PANEL -->
+    <div class="action-panel">
+        <div class="glass-card" style="border-top: 4px solid var(--qc-accent);">
+            <div class="card-title"><i class="bi bi-lightning-fill"></i> Responder Actions</div>
+            
+            <?php if ($curSt === 'pending'): ?>
+                <div class="alert mb-4" style="background: rgba(251, 191, 36, 0.05); color: var(--qc-gold); border: 1px solid rgba(251, 191, 36, 0.1); font-size: 13px; border-radius: 12px;">
+                    <i class="bi bi-info-circle-fill me-2"></i> This incident requires immediate acknowledgement before deployment.
+                </div>
+                <form action="/irms/ajax/update_status.php" method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="incident_id"  value="<?= $id ?>">
+                    <input type="hidden" name="action"       value="update_status">
+                    <input type="hidden" name="old_status"   value="pending">
+                    <input type="hidden" name="new_status"   value="in_progress">
+                    <input type="hidden" name="remarks"      value="Responder has acknowledged and is preparing for deployment.">
+                    <button type="submit" class="btn-main btn-gold-c">
+                        <i class="bi bi-check-circle-fill"></i> Acknowledge & Deploy
+                    </button>
+                </form>
+
+            <?php elseif ($curSt === 'in_progress'): ?>
+                <form action="/irms/ajax/update_status.php" method="POST" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="incident_id" value="<?= $id ?>">
+                    <input type="hidden" name="action"      value="update_status">
+                    <input type="hidden" name="old_status"  value="in_progress">
+                    <input type="hidden" name="new_status"  value="resolved">
+                    
+                    <div class="mb-4">
+                        <label class="form-label-c">Operational Findings</label>
+                        <textarea name="remarks" class="input-c" rows="4" required placeholder="Describe the actions taken and findings at the scene..."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label-c">Proof of Resolution</label>
+                        <label class="upload-zone" id="upload-label">
+                            <i class="bi bi-cloud-upload-fill"></i>
+                            <div style="font-size: 14px; font-weight: 700; color: #fff;">Upload Evidence</div>
+                            <div style="font-size: 11px; color: var(--text-dim);">Photo/Video of the resolved scene</div>
+                            <input type="file" name="evidence[]" id="file-input" multiple required accept="image/*,video/*" style="display: none;">
+                        </label>
+                        <div id="file-list" class="mt-2 small text-dim"></div>
+                    </div>
+
+                    <button type="submit" class="btn-main btn-primary-c">
+                        <i class="bi bi-shield-check"></i> Submit Resolution
+                    </button>
+                </form>
+
+            <?php elseif ($curSt === 'resolved'): ?>
+                <div class="text-center py-4">
+                    <i class="bi bi-check-circle-fill" style="font-size: 48px; color: #22c55e; display: block; margin-bottom: 16px;"></i>
+                    <h5 style="font-weight: 800;">Mission Resolved</h5>
+                    <p style="color: var(--text-dim); font-size: 14px;">Resolution report submitted. Awaiting administrative closure.</p>
+                </div>
+            <?php else: ?>
+                <div class="text-center py-4 opacity-50">
+                    <i class="bi bi-lock-fill" style="font-size: 48px; color: var(--text-dim); display: block; margin-bottom: 16px;"></i>
+                    <h5 style="font-weight: 800;">Case Closed</h5>
+                    <p style="color: var(--text-dim); font-size: 14px;">This incident is archived and read-only.</p>
+                </div>
             <?php endif; ?>
+        </div>
 
-            <!-- Reporter -->
-            <div class="card-c">
-                <div class="card-h"><i class="bi bi-person"></i> Reporter</div>
-                <div class="card-b">
-                    <div class="reporter-row">
-                        <div class="reporter-av"><?= strtoupper(substr($incident['reporter_name'], 0, 1)) ?></div>
-                        <div>
-                            <div class="reporter-name"><?= htmlspecialchars($incident['reporter_name']) ?></div>
-                            <div class="reporter-detail"><?= htmlspecialchars($incident['reporter_email']) ?></div>
-                            <?php if ($incident['reporter_phone']): ?>
-                            <div class="reporter-detail"><?= htmlspecialchars($incident['reporter_phone']) ?></div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
+        <div class="glass-card">
+            <div class="card-title"><i class="bi bi-person-fill"></i> Citizen Contact</div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="width: 48px; height: 48px; background: var(--qc-accent); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">
+                    <?= strtoupper(substr($incident['reporter_name'], 0, 1)) ?>
+                </div>
+                <div>
+                    <div style="font-weight: 700;"><?= htmlspecialchars($incident['reporter_name']) ?></div>
+                    <div style="font-size: 12px; color: var(--text-dim);"><?= htmlspecialchars($incident['reporter_phone'] ?: 'No Phone Provided') ?></div>
                 </div>
             </div>
-
-            <!-- Timeline -->
-            <div class="card-c">
-                <div class="card-h"><i class="bi bi-clock-history"></i> Status History</div>
-                <div class="card-b">
-                    <?php if (empty($logs)): ?>
-                        <p class="text-muted small mb-0">Walang log pa.</p>
-                    <?php else:
-                        $tlC = ['pending'=>'#d97706','in_progress'=>'#1e293b','resolved'=>'#16a34a','closed'=>'#6b7280'];
-                    ?>
-                    <div class="timeline">
-                        <?php foreach ($logs as $log):
-                            $c = $tlC[$log['new_status']] ?? '#64748b';
-                        ?>
-                        <div class="tl-item">
-                            <div class="tl-dot" style="background:<?= $c ?>;color:<?= $c ?>;"></div>
-                            <div class="tl-label"><?= $stLabel[$log['new_status']] ?? ucwords(str_replace('_',' ',$log['new_status'])) ?></div>
-                            <div class="tl-time">
-                                <?= date('M j, Y — g:i A', strtotime($log['changed_at'])) ?>
-                                <?php if (!empty($log['changed_by_name'])): ?>
-                                    &middot; <?= htmlspecialchars($log['changed_by_name']) ?>
-                                <?php endif; ?>
-                            </div>
-                            <?php if ($log['remarks']): ?>
-                                <div class="tl-note"><?= htmlspecialchars($log['remarks']) ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
+            <hr style="border-color: var(--glass-border);">
+            <form action="/irms/ajax/update_status.php" method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="incident_id" value="<?= $id ?>">
+                <input type="hidden" name="action" value="respond">
+                <label class="form-label-c">Send Update to Citizen</label>
+                <textarea name="message" class="input-c mb-3" rows="3" required placeholder="Type a message to the reporter..."></textarea>
+                <button type="submit" class="btn-main" style="background: var(--glass); border: 1px solid var(--glass-border); color: #fff;">
+                    <i class="bi bi-send-fill"></i> Send Intelligence
+                </button>
+            </form>
         </div>
     </div>
 </div>
 
-<?php if ($incident['latitude'] && $incident['longitude']): ?>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script>
-// Fix Leaflet broken default icons when pulling from CDN
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png'
-});
-
-var map = L.map('map', { zoomControl: true, dragging: true, scrollWheelZoom: false })
-           .setView([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>], 16);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    { attribution: '© CARTO', maxZoom: 19 }).addTo(map);
-L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>])
- .addTo(map)
- .bindPopup('<b><?= addslashes(htmlspecialchars($incident['title'])) ?></b><br><?= addslashes(htmlspecialchars($incident['location'])) ?>')
- .openPopup();
-</script>
+<?php if ($incident['latitude'] && $incident['longitude']): ?>
+    var map = L.map('map', { zoomControl: false }).setView([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>], 16);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }).addTo(map);
+    L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>]).addTo(map);
 <?php endif; ?>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-if (document.getElementById('res-files')) {
-    document.getElementById('res-files').addEventListener('change', function(e) {
-        const label = document.getElementById('file-label');
-        const list = document.getElementById('file-list');
-        if (this.files.length > 0) {
-            label.innerText = this.files.length + ' file(s) selected';
-            label.style.color = 'var(--qc-blue)';
-            let files = [];
-            for(let i=0; i<this.files.length; i++) {
-                files.push('<i class="bi bi-paperclip me-1"></i>' + this.files[i].name);
-            }
-            list.innerHTML = files.join('<br>');
-        } else {
-            label.innerText = 'I-upload ang Photo/Video (Proof)';
+
+    const fileInput = document.getElementById('file-input');
+    if(fileInput) {
+        fileInput.addEventListener('change', function() {
+            const list = document.getElementById('file-list');
             list.innerHTML = '';
-        }
-    });
-}
+            for(let f of this.files) {
+                list.innerHTML += `<div><i class="bi bi-paperclip"></i> ${f.name}</div>`;
+            }
+            document.getElementById('upload-label').style.borderColor = 'var(--qc-accent)';
+        });
+    }
 </script>
+</body>
+</html>
 </body>
 </html>

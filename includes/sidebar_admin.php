@@ -40,6 +40,10 @@ $userInitial = strtoupper(substr(strip_tags($userName), 0, 1));
            class="nav-link <?= $currentPage === 'users.php' ? 'active' : '' ?>">
             <i class="bi bi-people"></i> Users
         </a>
+        <a href="/irms/portal/admin/profile.php"
+           class="nav-link <?= $currentPage === 'profile.php' ? 'active' : '' ?>">
+            <i class="bi bi-person-badge"></i> My Profile
+        </a>
         <a href="/irms/portal/admin/categories.php"
            class="nav-link <?= $currentPage === 'categories.php' ? 'active' : '' ?>">
             <i class="bi bi-tags"></i> Categories
@@ -51,6 +55,14 @@ $userInitial = strtoupper(substr(strip_tags($userName), 0, 1));
         <a href="/irms/portal/admin/audit_logs.php"
            class="nav-link <?= $currentPage === 'audit_logs.php' ? 'active' : '' ?>">
             <i class="bi bi-journal-text"></i> Audit Logs
+        </a>
+        <a href="/irms/portal/admin/backup.php"
+           class="nav-link <?= $currentPage === 'backup.php' ? 'active' : '' ?>">
+            <i class="bi bi-database-lock"></i> Backup System
+        </a>
+        <a href="/irms/portal/admin/sms_logs.php"
+           class="nav-link <?= $currentPage === 'sms_logs.php' ? 'active' : '' ?>">
+            <i class="bi bi-chat-dots"></i> SMS Simulation
         </a>
     </nav>
 

@@ -1,8 +1,9 @@
 <?php
+// Database Configuration Template
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'irms');
-define('DB_USER', 'root');
-define('DB_PASS', '');  // blank ang default sa XAMPP
+define('DB_NAME', 'YOUR_DATABASE_NAME_HERE');
+define('DB_USER', 'YOUR_DATABASE_USER_HERE');
+define('DB_PASS', 'YOUR_DATABASE_PASSWORD_HERE');
 
 try {
     $pdo = new PDO(
@@ -16,5 +17,5 @@ try {
         ]
     );
 } catch (PDOException $e) {
-    die(json_encode(['error' => 'Database connection failed: ' . $e->getMessage()]));
+    die(json_encode(['error' => 'Database connection failed. Please check config/db.php']));
 }

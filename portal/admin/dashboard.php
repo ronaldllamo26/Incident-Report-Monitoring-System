@@ -133,7 +133,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm border-start border-primary border-3">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">Total Reports</div>
-                            <div class="fs-4 fw-bold"><?= $total ?></div>
+                            <div class="fs-4 fw-bold" id="kpi-total"><?= $total ?></div>
                         </div>
                     </div>
                 </div>
@@ -141,7 +141,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm border-start border-warning border-3">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">Action Needed</div>
-                            <div class="fs-4 fw-bold text-warning"><?= $counts['pending'] ?></div>
+                            <div class="fs-4 fw-bold text-warning" id="kpi-pending"><?= $counts['pending'] ?></div>
                         </div>
                     </div>
                 </div>
@@ -149,7 +149,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm border-start border-info border-3">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">In Progress</div>
-                            <div class="fs-4 fw-bold text-info"><?= $counts['in_progress'] ?></div>
+                            <div class="fs-4 fw-bold text-info" id="kpi-progress"><?= $counts['in_progress'] ?></div>
                         </div>
                     </div>
                 </div>
@@ -158,7 +158,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm border-start border-success border-3">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">SLA Success</div>
-                            <div class="fs-4 fw-bold text-success"><?= $kpis['sla'] ?>%</div>
+                            <div class="fs-4 fw-bold text-success"><span id="kpi-sla"><?= $kpis['sla'] ?></span>%</div>
                         </div>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ $sevColor = [
                     <div class="card border-0 shadow-sm border-start border-dark border-3">
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">Avg Response</div>
-                            <div class="fs-4 fw-bold"><?= $kpis['mtta'] ?> <small class="fw-normal fs-6">mins</small></div>
+                            <div class="fs-4 fw-bold"><span id="kpi-mtta"><?= $kpis['mtta'] ?></span> <small class="fw-normal fs-6">mins</small></div>
                         </div>
                     </div>
                 </div>
@@ -176,7 +176,7 @@ $sevColor = [
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">Citizen CSAT</div>
                             <div class="fs-4 fw-bold" style="color: #f59e0b;">
-                                <?= $kpis['csat'] ?> <i class="bi bi-star-fill fs-6"></i>
+                                <span id="kpi-csat"><?= $kpis['csat'] ?></span> <i class="bi bi-star-fill fs-6"></i>
                             </div>
                         </div>
                     </div>
@@ -419,5 +419,41 @@ setInterval(function(){
     fetch('/irms/ajax/check_escalations.php').then(r=>r.json()).then(data=>{ if(data.escalated>0) location.reload(); }).catch(()=>{});
 }, 60000);
 </script>
+
+    <!-- Dashboard Live Poller -->
+    <script>
+    let lastIncidentCount = null;
+
+    function speakDispatch(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    function refreshDashboardKPIs() {
+        fetch('/irms/ajax/get_dashboard_stats.php')
+            .then(res => res.json())
+            .then(data => {
+                // Audio Dispatch Logic
+                if (lastIncidentCount !== null && data.pending > lastIncidentCount) {
+                    speakDispatch("Attention! New unassigned incident detected in the queue. Please check the dashboard.");
+                }
+                lastIncidentCount = data.pending;
+
+                if (document.getElementById('kpi-total')) document.getElementById('kpi-total').textContent = data.total;
+                if (document.getElementById('kpi-pending')) document.getElementById('kpi-pending').textContent = data.pending;
+                if (document.getElementById('kpi-progress')) document.getElementById('kpi-progress').textContent = data.progress;
+                if (document.getElementById('kpi-sla')) document.getElementById('kpi-sla').textContent = data.sla;
+                if (document.getElementById('kpi-mtta')) document.getElementById('kpi-mtta').textContent = data.mtta;
+                if (document.getElementById('kpi-csat')) document.getElementById('kpi-csat').textContent = data.csat;
+            })
+            .catch(err => console.error('KPI Update Failed:', err));
+    }
+    setInterval(refreshDashboardKPIs, 10000); // Faster polling for dispatcher (10s)
+    </script>
 </body>
 </html>

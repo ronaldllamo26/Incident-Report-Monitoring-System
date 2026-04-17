@@ -319,6 +319,25 @@ class Incident {
             WHERE id = ?
         ");
         $stmt->execute([$slaDeadline, $priority, $finalResponder, $incidentId]);
+
+        // ── SMS NOTIFICATION SIMULATION ──────────────────
+        if ($severity === 'critical' && $finalResponder) {
+            $resp = $this->pdo->prepare("SELECT phone FROM users WHERE id = ?");
+            $resp->execute([$finalResponder]);
+            $phone = $resp->fetchColumn();
+
+            if ($phone) {
+                require_once __DIR__ . '/../includes/SMSService.php';
+                $fullInc = $this->getById($incidentId);
+                SMSService::notifyCriticalIncident($fullInc, $phone);
+                
+                // Log SMS event
+                $this->pdo->prepare("
+                    INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
+                    VALUES (?, NULL, 'pending', 'pending', ?)
+                ")->execute([$incidentId, "📱 SMS Alert: Critical notification sent to " . ($fullInc['responder_name'] ?: "assigned personnel") . "."]);
+            }
+        }
     }
 
     private function getResponderName($id) {

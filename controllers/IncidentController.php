@@ -19,6 +19,13 @@ if ($action === 'submit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $location = trim($_POST['location']     ?? '');
     $lat      = $_POST['latitude']          ?? null;
     $lng      = $_POST['longitude']         ?? null;
+    $consent  = $_POST['privacy_consent']    ?? '';
+
+    if (!$consent) {
+        header('Location: /irms/citizen/report.php?error=' .
+               urlencode('Kailangan mong sumang-ayon sa Privacy Policy para makapag-submit ng report.'));
+        exit;
+    }
 
     // Basic validation
     if (!$title || !$cat || !$severity || !$desc || !$location) {

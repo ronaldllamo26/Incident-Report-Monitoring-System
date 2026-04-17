@@ -139,7 +139,7 @@
         padding: 12px 24px;
         position: sticky;
         top: 0;
-        z-index: 100;
+        z-index: 9999;
         display: flex;
         align-items: center;
         justify-content: space-between;

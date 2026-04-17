@@ -23,9 +23,7 @@ foreach ($allIncidents as $inc) {
 }
 
 // Now get the specific paginated results (with optional status filter)
-// Note: We'll implement a simple PHP search if provided
 $paginatedIncidents = $model->getAll($filters, $perPage, $offset);
-// Simple search filtering if needed (though Incident::getAll could be updated for LIKE)
 if ($search) {
     $paginatedIncidents = array_filter($paginatedIncidents, function($i) use ($search) {
         return str_contains(strtolower($i['title']), strtolower($search)) || 
@@ -36,356 +34,391 @@ $totalFiltered = $model->countTotal($filters);
 $totalPages    = ceil($totalFiltered / $perPage);
 
 $stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' => 'Resolved', 'closed' => 'Closed'];
-$stStyle = [
-    'pending'     => 'background:#fef3c7;color:#92400e;',
-    'in_progress' => 'background:#dbeafe;color:#1e40af;',
-    'resolved'    => 'background:#dcfce7;color:#166534;',
-    'closed'      => 'background:#f3f4f6;color:#4b5563;',
-];
-$sevColor = ['low' => '#16a34a', 'medium' => '#d97706', 'high' => '#ea580c', 'critical' => '#CE1126'];
-$sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'critical' => '#fef2f2'];
 ?>
 <!DOCTYPE html>
 <html lang="fil">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Responder Dashboard — QC-ALERTO</title>
+    <title>Responder Center — QC-ALERTO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --qc-blue:  #1e293b;
-            --qc-navy:  #133C52;
-            --qc-red:   #CE1126;
-            --bg:       #f4f6f9;
-            --border:   #e2e8f0;
-            --text:     #1e293b;
-            --muted:    #64748b;
+            --qc-blue:   #0f172a;
+            --qc-navy:   #1e293b;
+            --qc-accent: #3b82f6;
+            --qc-gold:   #fbbf24;
+            --qc-red:    #ef4444;
+            --glass:     rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-dim:  #94a3b8;
         }
-        * { box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; color: var(--text); }
 
-        /* ── Topbar ─────────────────────────────────────────── */
-        .topbar {
-            background: var(--qc-blue);
-            border-bottom: 3px solid var(--qc-red);
-            position: sticky; top: 0; z-index: 100;
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
         }
-        .topbar-inner {
-            max-width: 1200px; margin: 0 auto; padding: 0 24px;
-            display: flex; align-items: center; justify-content: space-between; height: 56px;
+
+        /* ── Glassmorphism Sidebar ── */
+        .sidebar {
+            width: 260px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            height: 100vh;
+            position: fixed;
+            left: 0; top: 0;
+            z-index: 1000;
+            padding: 24px;
         }
-        .brand { font-size: 16px; font-weight: 700; color: #fff; text-decoration: none;
-                 display: flex; align-items: center; gap: 10px; letter-spacing: 0.2px; }
-        .brand img { height: 30px; width: 30px; object-fit: contain; }
-        .role-badge { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
-                      color: #fff; font-size: 10px; font-weight: 600; padding: 2px 8px;
-                      border-radius: 4px; letter-spacing: 0.8px; text-transform: uppercase; }
-        .topbar-right { display: flex; align-items: center; gap: 16px; }
-        .user-label { font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500;
-                      display: flex; align-items: center; gap: 6px; }
-        .logout-link { font-size: 12px; color: rgba(255,255,255,0.7); text-decoration: none;
-                       display: flex; align-items: center; gap: 5px; padding: 5px 10px;
-                       border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; transition: all 0.2s; }
-        .logout-link:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .main-content { margin-left: 260px; padding: 32px; }
 
-        /* ── Page Header ────────────────────────────────────── */
-        .page-header {
-            background: #fff; border-bottom: 1px solid var(--border);
-            padding: 20px 0;
+        .brand-box { display: flex; align-items: center; gap: 12px; margin-bottom: 48px; }
+        .brand-box img { width: 40px; height: 40px; filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.5)); }
+        .brand-name { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; background: linear-gradient(to right, #fff, var(--qc-gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .nav-menu { list-style: none; padding: 0; margin: 0; }
+        .nav-item { margin-bottom: 8px; }
+        .nav-link-c {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; border-radius: 12px;
+            color: var(--text-dim); text-decoration: none;
+            transition: all 0.3s; font-weight: 500;
         }
-        .page-header-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-        .page-header h4 { font-size: 18px; font-weight: 700; color: var(--text); margin: 0 0 2px; }
-        .page-header p { font-size: 13px; color: var(--muted); margin: 0; }
+        .nav-link-c:hover { background: var(--glass); color: #fff; transform: translateX(5px); }
+        .nav-link-c.active { background: var(--qc-accent); color: #fff; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3); }
 
-        .main-wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
-
-        /* ── Stat Cards ─────────────────────────────────────── */
-        .stat-card {
-            background: #fff; border: 1px solid var(--border); border-radius: 10px;
-            padding: 18px 20px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
-            display: flex; align-items: center; gap: 14px;
+        /* ── Header ── */
+        .dashboard-header { 
+            display: flex; justify-content: space-between; align-items: flex-end; 
+            margin-bottom: 40px; position: sticky; top: 0; z-index: 9999;
+            background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(20px);
+            padding: 20px 0; border-bottom: 1px solid var(--glass-border);
         }
-        .stat-card:hover { border-color: var(--qc-blue); box-shadow: 0 0 0 3px rgba(0,56,168,0.08); }
-        .stat-card.active { border-color: var(--qc-blue); box-shadow: 0 0 0 3px rgba(30,41,59,0.12);
-                            background: #f0f4ff; }
-        .stat-icon { width: 42px; height: 42px; border-radius: 8px; display: flex;
-                     align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-        .stat-num { font-size: 26px; font-weight: 700; line-height: 1; color: var(--text); }
-        .stat-lbl { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+        .header-title { font-size: 28px; font-weight: 800; margin: 0; }
+        .header-sub { color: var(--text-dim); font-size: 14px; }
 
-        /* ── Incidents Table Card ───────────────────────────── */
-        .table-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-        .table-card-header { padding: 14px 20px; border-bottom: 1px solid var(--border);
-                             display: flex; align-items: center; justify-content: space-between;
-                             flex-wrap: wrap; gap: 12px; background: #fafbfc; }
-        .section-title { font-size: 14px; font-weight: 600; color: var(--text); }
+        .live-clock {
+            background: var(--glass); border: 1px solid var(--glass-border);
+            padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px; color: var(--qc-gold);
+        }
+        .pulse-dot { width: 8px; height: 8px; background: var(--qc-gold); border-radius: 50%; box-shadow: 0 0 10px var(--qc-gold); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
-        /* Filter tabs */
-        .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-        .ftab { padding: 5px 13px; border-radius: 6px; font-size: 12px; font-weight: 500;
-                border: 1px solid var(--border); background: #fff; color: var(--muted);
-                cursor: pointer; transition: all 0.15s; }
-        .ftab:hover { border-color: var(--qc-blue); color: var(--qc-blue); }
-        .ftab.active { background: var(--qc-blue); border-color: var(--qc-blue);
-                       color: #fff; font-weight: 600; }
+        /* ── KPI Cards ── */
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 40px; }
+        .kpi-card {
+            background: var(--glass); border: 1px solid var(--glass-border);
+            padding: 24px; border-radius: 20px; text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative; overflow: hidden;
+        }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, transparent, rgba(255,255,255,0.05)); opacity: 0; transition: opacity 0.4s; }
+        .kpi-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.2); }
+        .kpi-card:hover::before { opacity: 1; }
+        .kpi-card.active { background: rgba(59, 130, 246, 0.1); border-color: var(--qc-accent); }
 
-        /* Search */
-        .search-box { position: relative; }
-        .search-box input { padding: 7px 12px 7px 32px; border: 1px solid var(--border);
-                            border-radius: 6px; font-size: 13px; outline: none; background: #fff;
-                            transition: border-color 0.2s; width: 200px; }
-        .search-box input:focus { border-color: var(--qc-blue); }
-        .search-box .si { position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-                          color: var(--muted); font-size: 13px; }
+        .kpi-val { font-size: 32px; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 8px; display: block; }
+        .kpi-lbl { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .kpi-icon { position: absolute; right: 20px; bottom: 20px; font-size: 24px; opacity: 0.2; }
 
-        /* Table */
-        .table { margin: 0; }
-        .table th { font-size: 11px; font-weight: 600; color: var(--muted);
-                    text-transform: uppercase; letter-spacing: 0.4px; padding: 10px 16px;
-                    background: #fafbfc; border-bottom: 1px solid var(--border); }
-        .table td { font-size: 13px; padding: 13px 16px; vertical-align: middle;
-                    border-color: #f1f5f9; color: var(--text); }
-        .table tbody tr { transition: background 0.1s; }
-        .table tbody tr:hover { background: #f8fafc; }
+        /* ── Table Area ── */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 32px;
+        }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        
+        .search-wrap { position: relative; width: 300px; }
+        .search-wrap input {
+            width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border);
+            padding: 10px 16px 10px 40px; border-radius: 12px; color: #fff; font-size: 14px;
+            transition: all 0.3s;
+        }
+        .search-wrap input:focus { border-color: var(--qc-accent); background: rgba(0,0,0,0.4); outline: none; }
+        .search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-dim); }
 
-        .sev-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-        .badge-status { padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .badge-sev    { padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .tracking-num { font-family: monospace; font-size: 11px; background: #f1f5f9;
-                        color: #475569; padding: 2px 7px; border-radius: 4px; }
-        .btn-view { padding: 5px 14px; background: var(--qc-blue); color: #fff; border-radius: 6px;
-                    font-size: 12px; font-weight: 600; text-decoration: none; transition: opacity 0.2s; }
-        .btn-view:hover { opacity: 0.85; color: #fff; }
+        .modern-table { width: 100%; border-collapse: separate; border-spacing: 0 12px; margin-top: -12px; }
+        .modern-table th { color: var(--text-dim); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; padding: 0 20px; border: none; }
+        .modern-table tr { transition: all 0.3s; }
+        .modern-table td { background: rgba(255,255,255,0.03); padding: 16px 20px; border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); }
+        .modern-table td:first-child { border-left: 1px solid var(--glass-border); border-radius: 16px 0 0 16px; }
+        .modern-table td:last-child { border-right: 1px solid var(--glass-border); border-radius: 0 16px 16px 0; }
+        .modern-table tr:hover td { background: rgba(255,255,255,0.08); transform: scale(1.005); }
 
-        /* Empty state */
-        .empty-state { text-align: center; padding: 60px 20px; }
-        #no-results { display: none; }
+        .badge-modern { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+        .st-pending { background: rgba(251, 191, 36, 0.1); color: var(--qc-gold); }
+        .st-in_progress { background: rgba(59, 130, 246, 0.1); color: var(--qc-accent); }
+        .st-resolved { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .st-closed { background: rgba(148, 163, 184, 0.1); color: var(--text-dim); }
+
+        .btn-action {
+            background: var(--qc-accent); color: #fff; padding: 8px 20px;
+            border-radius: 100px; font-size: 12px; font-weight: 700;
+            text-decoration: none; transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
+        }
+        .btn-action:hover { background: #2563eb; color: #fff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4); }
+
+        /* ── Toasts ── */
+        .toast-container { position: fixed; top: 24px; right: 24px; z-index: 2000; }
+        .qc-toast {
+            background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            border: 1px solid var(--qc-accent); border-left: 4px solid var(--qc-accent);
+            padding: 16px 20px; border-radius: 12px; color: #fff;
+            display: flex; align-items: center; gap: 15px; margin-bottom: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* ── Responsive ── */
+        @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; padding: 16px; }
+            .kpi-grid { grid-template-columns: 1fr 1fr; }
+            .dashboard-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+            .panel-header { flex-direction: column; gap: 16px; }
+            .search-wrap { width: 100%; }
+        }
     </style>
 </head>
 <body>
 
-<!-- Topbar -->
-<nav class="topbar">
-    <div class="topbar-inner">
-        <a href="/irms/portal/responder/dashboard.php" class="brand">
-            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC">
-            QC-ALERTO
-            <span class="role-badge">Responder</span>
-        </a>
-        <div class="topbar-right">
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="brand-box">
+        <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC">
+        <span class="brand-name">QC-ALERTO</span>
+    </div>
+
+    <ul class="nav-menu">
+        <li class="nav-item">
+            <a href="/irms/portal/responder/dashboard.php" class="nav-link-c active">
+                <i class="bi bi-grid-fill"></i> Command Center
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/irms/portal/responder/profile.php" class="nav-link-c">
+                <i class="bi bi-person-fill"></i> My Profile
+            </a>
+        </li>
+        <li class="nav-item mt-4">
+            <a href="/irms/controllers/AuthController.php?action=logout" class="nav-link-c" style="color: var(--qc-red);">
+                <i class="bi bi-box-arrow-right"></i> Sign Out
+            </a>
+        </li>
+    </ul>
+
+    <div style="position: absolute; bottom: 24px; left: 24px; right: 24px;">
+        <div class="glass-panel" style="padding: 16px; border-radius: 16px; background: rgba(255,255,255,0.05);">
+            <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Responder</div>
+            <div style="font-size: 14px; font-weight: 700;"><?= htmlspecialchars($user['name']) ?></div>
+            <div style="font-size: 11px; color: var(--text-dim);"><?= date('M d, Y') ?></div>
+        </div>
+    </div>
+</aside>
+
+<main class="main-content">
+    <div class="dashboard-header">
+        <div>
+            <h1 class="header-title">Command Center</h1>
+            <div class="header-sub">Responder Portal &middot; Assigned Incidents</div>
+        </div>
+        <div class="live-clock">
             <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
-            <span class="user-label">
-                <i class="bi bi-person-circle"></i>
-                <?= htmlspecialchars($user['name']) ?>
-            </span>
-            <a href="/irms/controllers/AuthController.php?action=logout" class="logout-link">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </a>
-        </div>
-    </div>
-</nav>
-
-<!-- Page Header -->
-<div class="page-header">
-    <div class="page-header-inner">
-        <h4>Assigned Incidents</h4>
-        <p>Lahat ng incidents na naka-assign sa iyo bilang responder.</p>
-    </div>
-</div>
-
-<div class="main-wrap">
-
-    <!-- Stat Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-2" style="width: 20%;">
-            <a href="?status=" class="stat-card <?= empty($_GET['status']) ? 'active' : '' ?>" style="text-decoration:none;">
-                <div class="stat-icon" style="background:#f0f4ff;">
-                    <i class="bi bi-clipboard-list" style="color:var(--qc-blue);"></i>
-                </div>
-                <div>
-                    <div class="stat-num"><?= $counts['all'] ?></div>
-                    <div class="stat-lbl">Lahat</div>
-                </div>
-            </a>
-        </div>
-        <div class="col-6 col-md-2" style="width: 20%;">
-            <a href="?status=pending" class="stat-card <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>" style="text-decoration:none;">
-                <div class="stat-icon" style="background:#fffbeb;">
-                    <i class="bi bi-hourglass-split" style="color:#d97706;"></i>
-                </div>
-                <div>
-                    <div class="stat-num"><?= $counts['pending'] ?></div>
-                    <div class="stat-lbl">Pending</div>
-                </div>
-            </a>
-        </div>
-        <div class="col-6 col-md-2" style="width: 20%;">
-            <a href="?status=in_progress" class="stat-card <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>" style="text-decoration:none;">
-                <div class="stat-icon" style="background:#eff6ff;">
-                    <i class="bi bi-arrow-repeat" style="color:#1d4ed8;"></i>
-                </div>
-                <div>
-                    <div class="stat-num"><?= $counts['in_progress'] ?></div>
-                    <div class="stat-lbl">In Progress</div>
-                </div>
-            </a>
-        </div>
-        <div class="col-6 col-md-2" style="width: 20%;">
-            <a href="?status=resolved" class="stat-card <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>" style="text-decoration:none;">
-                <div class="stat-icon" style="background:#f0fdf4;">
-                    <i class="bi bi-check-circle" style="color:#16a34a;"></i>
-                </div>
-                <div>
-                    <div class="stat-num"><?= $counts['resolved'] ?></div>
-                    <div class="stat-lbl">Resolved</div>
-                </div>
-            </a>
-        </div>
-        <div class="col-6 col-md-2" style="width: 20%;">
-            <a href="?status=closed" class="stat-card <?= ($_GET['status']??'') === 'closed' ? 'active' : '' ?>" style="text-decoration:none;">
-                <div class="stat-icon" style="background:#f3f4f6;">
-                    <i class="bi bi-lock-fill" style="color:#64748b;"></i>
-                </div>
-                <div>
-                    <div class="stat-num"><?= $counts['closed'] ?></div>
-                    <div class="stat-lbl">Closed</div>
-                </div>
-            </a>
+            <div style="width: 1px; height: 20px; background: var(--glass-border); margin: 0 10px;"></div>
+            <div class="pulse-dot"></div>
+            <span id="current-time">00:00:00 AM</span>
         </div>
     </div>
 
-    <!-- Table -->
-    <div class="table-card">
-        <div class="table-card-header">
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <span class="section-title">
-                    <i class="bi bi-list-ul me-1" style="color:var(--qc-blue);"></i>
-                    Listahan ng Incidents
-                </span>
-                    <div class="filter-tabs">
-                        <a href="?status=" class="ftab <?= empty($_GET['status']) ? 'active' : '' ?>" style="text-decoration:none;">Lahat (<?= $counts['all'] ?>)</a>
-                        <a href="?status=pending" class="ftab <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>" style="text-decoration:none;">Pending (<?= $counts['pending'] ?>)</a>
-                        <a href="?status=in_progress" class="ftab <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>" style="text-decoration:none;">In Progress (<?= $counts['in_progress'] ?>)</a>
-                        <a href="?status=resolved" class="ftab <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>" style="text-decoration:none;">Resolved (<?= $counts['resolved'] ?>)</a>
-                        <a href="?status=closed" class="ftab <?= ($_GET['status']??'') === 'closed' ? 'active' : '' ?>" style="text-decoration:none;">Closed (<?= $counts['closed'] ?>)</a>
-                    </div>
-                </div>
-                <form method="GET" class="search-box">
-                    <input type="hidden" name="status" value="<?= htmlspecialchars($_GET['status']??'') ?>">
-                    <i class="bi bi-search si"></i>
-                    <input type="text" name="search" placeholder="Hanapin..." value="<?= htmlspecialchars($search) ?>">
-                </form>
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+        <a href="?status=" class="kpi-card <?= empty($_GET['status']) ? 'active' : '' ?>">
+            <span class="kpi-val"><?= $counts['all'] ?></span>
+            <span class="kpi-lbl">Total Reports</span>
+            <i class="bi bi-collection-fill kpi-icon"></i>
+        </a>
+        <a href="?status=pending" class="kpi-card <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>">
+            <span class="kpi-val" style="color: var(--qc-gold);"><?= $counts['pending'] ?></span>
+            <span class="kpi-lbl">New Alerts</span>
+            <i class="bi bi-bell-fill kpi-icon" style="color: var(--qc-gold);"></i>
+        </a>
+        <a href="?status=in_progress" class="kpi-card <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>">
+            <span class="kpi-val" style="color: var(--qc-accent);"><?= $counts['in_progress'] ?></span>
+            <span class="kpi-lbl">In Progress</span>
+            <i class="bi bi-activity kpi-icon" style="color: var(--qc-accent);"></i>
+        </a>
+        <a href="?status=resolved" class="kpi-card <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>">
+            <span class="kpi-val" style="color: #22c55e;"><?= $counts['resolved'] ?></span>
+            <span class="kpi-lbl">Resolved</span>
+            <i class="bi bi-check-all kpi-icon" style="color: #22c55e;"></i>
+        </a>
+        <a href="?status=closed" class="kpi-card <?= ($_GET['status']??'') === 'closed' ? 'active' : '' ?>">
+            <span class="kpi-val"><?= $counts['closed'] ?></span>
+            <span class="kpi-lbl">Archived</span>
+            <i class="bi bi-archive-fill kpi-icon"></i>
+        </a>
+    </div>
+
+    <!-- Main Panel -->
+    <div class="glass-panel">
+        <div class="panel-header">
+            <h5 style="font-weight: 700; margin: 0;">Incident Log</h5>
+            <form method="GET" class="search-wrap">
+                <input type="hidden" name="status" value="<?= htmlspecialchars($_GET['status']??'') ?>">
+                <i class="bi bi-search"></i>
+                <input type="text" name="search" placeholder="Search reports..." value="<?= htmlspecialchars($search) ?>">
+            </form>
         </div>
 
         <?php if (empty($paginatedIncidents)): ?>
-            <div class="empty-state">
-                <i class="bi bi-inbox" style="font-size:40px;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
-                <p class="text-muted mb-0">Wala kang nahanap na incident.</p>
+            <div style="text-align: center; padding: 80px 0;">
+                <i class="bi bi-cloud-check" style="font-size: 64px; color: var(--glass-border); display: block; margin-bottom: 20px;"></i>
+                <h5 style="font-weight: 700;">No Incidents Found</h5>
+                <p style="color: var(--text-dim);">Lahat ng cases ay cleared o walang tugma sa search.</p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
-                <table class="table table-hover" id="inc-table">
+                <table class="modern-table">
                     <thead>
                         <tr>
-                            <th style="width:40px;">Sev.</th>
-                            <th>Incident</th>
-                            <th>Kategorya</th>
+                            <th>Ref #</th>
+                            <th>Details</th>
+                            <th>Category</th>
                             <th>Status</th>
-                            <th>Petsa</th>
-                            <th style="width:80px;"></th>
+                            <th>Date</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                    <?php foreach ($paginatedIncidents as $inc):
-                        $sc = $sevColor[$inc['severity']] ?? '#64748b';
-                        $ss = $stStyle[$inc['status']] ?? '';
-                    ?>
-                        <tr>
-                            <td>
-                                <span class="sev-dot" style="background:<?= $sc ?>;"></span>
-                            </td>
-                            <td>
-                                <div style="font-weight:600;font-size:13px;margin-bottom:2px;">
-                                    <?= htmlspecialchars($inc['title']) ?>
-                                </div>
-                                <div style="font-size:11px;color:var(--muted);">
-                                    <i class="bi bi-geo-alt"></i>
-                                    <?= htmlspecialchars(mb_substr($inc['location'], 0, 50)) ?>
-                                </div>
-                            </td>
-                            <td>
-                                <span style="font-size:12px;background:#f1f5f9;color:#374151;
-                                             padding:3px 9px;border-radius:5px;font-weight:500;">
-                                    <?= htmlspecialchars($inc['category_name']) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge-status" style="<?= $ss ?>">
-                                    <?= $stLabel[$inc['status']] ?? ucfirst($inc['status']) ?>
-                                </span>
-                            </td>
-                            <td style="color:var(--muted);font-size:12px;">
-                                <?= date('M d, Y', strtotime($inc['reported_at'])) ?>
-                            </td>
-                            <td>
-                                <a href="/irms/portal/responder/view_incident.php?id=<?= $inc['id'] ?>"
-                                   class="btn-view">Tingnan</a>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                        <?php foreach ($paginatedIncidents as $inc): 
+                            $stClass = 'st-' . $inc['status'];
+                        ?>
+                            <tr>
+                                <td style="font-family: monospace; font-weight: 700; color: var(--qc-gold);">
+                                    #<?= str_pad($inc['id'], 5, '0', STR_PAD_LEFT) ?>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;"><?= htmlspecialchars($inc['title']) ?></div>
+                                    <div style="font-size: 12px; color: var(--text-dim);">
+                                        <i class="bi bi-geo-alt-fill me-1"></i><?= htmlspecialchars(mb_strimwidth($inc['location'], 0, 45, "...")) ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-size: 12px; font-weight: 600; color: var(--text-dim);">
+                                        <i class="bi bi-tag-fill me-1 opacity-50"></i><?= htmlspecialchars($inc['category_name']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge-modern <?= $stClass ?>">
+                                        <i class="bi bi-dot" style="font-size: 24px; line-height: 0;"></i>
+                                        <?= $stLabel[$inc['status']] ?? ucfirst($inc['status']) ?>
+                                    </span>
+                                </td>
+                                <td style="font-size: 13px; color: var(--text-dim);">
+                                    <?= date('M d, Y', strtotime($inc['reported_at'])) ?>
+                                </td>
+                                <td>
+                                    <a href="/irms/portal/responder/view_incident.php?id=<?= $inc['id'] ?>" class="btn-action">Deploy</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-            <div id="no-results" class="empty-state" style="<?= empty($paginatedIncidents) ? 'display:block' : 'display:none' ?>">
-                <i class="bi bi-search" style="font-size:36px;color:#cbd5e1;display:block;margin-bottom:10px;"></i>
-                <p class="text-muted mb-0">Walang nahanap na incident.</p>
-            </div>
 
-            <!-- Pagination -->
             <?php if ($totalPages > 1): ?>
-            <div class="d-flex justify-content-between align-items-center px-4 py-3 border-top" style="background:#fafbfc;">
-                <div class="text-muted small">
-                    Showing <?= number_format($offset + 1) ?>–<?= number_format(min($offset + $perPage, $totalFiltered)) ?> of <?= number_format($totalFiltered) ?>
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top border-secondary opacity-75">
+                    <div style="font-size: 12px; color: var(--text-dim);">
+                        Showing Page <?= $page ?> of <?= $totalPages ?>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <?php if ($page > 1): ?>
+                            <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>" class="btn-action" style="padding: 6px 16px; background: var(--glass);">Prev</a>
+                        <?php endif; ?>
+                        <?php if ($page < $totalPages): ?>
+                            <a href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>" class="btn-action" style="padding: 6px 16px; background: var(--glass);">Next</a>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
-                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page - 1])) ?>">
-                                <i class="bi bi-chevron-left"></i>
-                            </a>
-                        </li>
-                        <?php
-                        $start = max(1, $page - 2);
-                        $end   = min($totalPages, $page + 2);
-                        for ($p = $start; $p <= $end; $p++):
-                        ?>
-                        <li class="page-item <?= $p == $page ? 'active' : '' ?>">
-                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $p])) ?>">
-                                <?= $p ?>
-                            </a>
-                        </li>
-                        <?php endfor; ?>
-                        <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
-                            <a class="page-link" href="?<?= http_build_query(array_merge($_GET, ['page' => $page + 1])) ?>">
-                                <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
             <?php endif; ?>
         <?php endif; ?>
     </div>
+</main>
 
-</div>
+<div class="toast-container" id="toast-container"></div>
 
-<style>
-/* Add a little styling for the pagination buttons inside the card */
-.pagination .page-link { color: var(--qc-blue); border-color: var(--border); }
-.pagination .page-item.active .page-link { background: var(--qc-blue); border-color: var(--qc-blue); color: #fff; }
-</style>
+<!-- Audio for notifications -->
+<audio id="alert-sound" preload="auto">
+    <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+    // ── Clock Logic ──
+    function updateClock() {
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        document.getElementById('current-time').innerText = time;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Polling Logic ──
+    let lastCount = <?= $counts['pending'] ?>;
+    
+    function checkNewAssignments() {
+        fetch(`/irms/ajax/check_assignments.php?last_count=${lastCount}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.new_detected) {
+                    showToast("New Incident Assigned!", "May bago kang report na kailangang aksyunan agad.");
+                    playAlert();
+                    // Optional: Auto refresh table after 3 seconds
+                    setTimeout(() => location.reload(), 3000);
+                }
+                lastCount = data.current_count;
+            })
+            .catch(err => console.error("Polling Error:", err));
+    }
+
+    function showToast(title, msg) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'qc-toast';
+        toast.innerHTML = `
+            <i class="bi bi-exclamation-triangle-fill" style="font-size: 24px; color: var(--qc-gold);"></i>
+            <div>
+                <div style="font-weight: 800; font-size: 15px;">${title}</div>
+                <div style="font-size: 12px; opacity: 0.8;">${msg}</div>
+            </div>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => toast.style.opacity = '0', 4500);
+        setTimeout(() => toast.remove(), 5000);
+    }
+
+    function playAlert() {
+        const audio = document.getElementById('alert-sound');
+        audio.play().catch(e => console.log("Audio play blocked by browser. User interaction needed."));
+    }
+
+    // Start polling every 15 seconds
+    setInterval(checkNewAssignments, 15000);
+</script>
+
 </body>
 </html>

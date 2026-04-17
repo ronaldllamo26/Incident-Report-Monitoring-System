@@ -348,12 +348,26 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                             <div id="media-preview" class="mt-2 d-flex flex-wrap gap-2"></div>
                         </div>
 
+                        <!-- Privacy Consent -->
+                        <div class="mb-4 p-3 rounded" style="background:#f8fafc; border:1px solid #e2e8f0;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="privacy_consent" id="privacyConsent" required style="cursor:pointer;">
+                                <label class="form-check-label small" for="privacyConsent" style="cursor:pointer; color:#475569;">
+                                    Nababasa ko at sumasang-ayon ako sa 
+                                    <a href="/irms/public/privacy.php" target="_blank" class="fw-bold text-decoration-none" style="color:#2563eb;">
+                                        Privacy Policy & Terms
+                                    </a> 
+                                    ng QC-ALERTO. <span class="text-danger">*</span>
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Buttons -->
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold" style="background:#1e293b; border:none;">
                                 <i class="bi bi-send me-1"></i> I-submit ang Report
                             </button>
-                            <a href="/irms/citizen/dashboard.php" class="btn btn-outline-secondary">
+                            <a href="/irms/citizen/dashboard.php" class="btn btn-outline-secondary px-4 py-2">
                                 Kanselahin
                             </a>
                         </div>

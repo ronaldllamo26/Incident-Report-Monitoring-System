@@ -285,6 +285,18 @@ $error = $_GET['error'] ?? '';
                 </div>
             </div>
 
+            <!-- Privacy Consent -->
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="privacy_consent" id="privacyConsent" required style="cursor:pointer;">
+                <label class="form-check-label" for="privacyConsent" style="font-size:12px; color:var(--text-muted); cursor:pointer;">
+                    Nababasa ko at sumasang-ayon ako sa 
+                    <a href="/irms/public/privacy.php" target="_blank" style="color:var(--qa-blue); font-weight:700; text-decoration:none;">
+                        Privacy Policy & Terms
+                    </a> 
+                    ng QC-ALERTO. <span class="text-danger">*</span>
+                </label>
+            </div>
+
             <button type="submit" class="btn-login">
                 <i class="bi bi-person-plus"></i>
                 Mag-register

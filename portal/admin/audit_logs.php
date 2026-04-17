@@ -52,6 +52,27 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $logs = $stmt->fetchAll();
 
+// ── ANALYTICS DATA ─────────────────────────────────────
+$trendDays = 14;
+$trendStmt = $pdo->prepare("
+    SELECT DATE(created_at) as date, COUNT(*) as count
+    FROM audit_logs
+    WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+    GROUP BY DATE(created_at)
+    ORDER BY date ASC
+");
+$trendStmt->execute([$trendDays]);
+$trendData = $trendStmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Fill gaps in dates
+$dates = [];
+$counts = [];
+for ($i = $trendDays; $i >= 0; $i--) {
+    $d = date('Y-m-d', strtotime("-$i days"));
+    $dates[]  = date('M d', strtotime($d));
+    $counts[] = $trendData[$d] ?? 0;
+}
+
 // Filter options
 $actions      = $pdo->query("SELECT DISTINCT action FROM audit_logs ORDER BY action")->fetchAll(PDO::FETCH_COLUMN);
 $target_types = $pdo->query("SELECT DISTINCT target_type FROM audit_logs WHERE target_type IS NOT NULL ORDER BY target_type")->fetchAll(PDO::FETCH_COLUMN);
@@ -79,6 +100,7 @@ function getActionStyle(string $action): array {
     <title>Audit Logs — IRMS Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <?php include __DIR__ . '/../../includes/sidebar_style.php'; ?>
     <style>
         /* Log timeline style */
@@ -169,6 +191,11 @@ function getActionStyle(string $action): array {
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
+                <a href="/irms/portal/admin/export_audit_csv.php?<?= http_build_query($_GET) ?>"
+                   class="btn btn-success btn-sm me-1"
+                   title="Export to CSV">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                </a>
                 <a href="/irms/portal/admin/audit_logs.php"
                    class="btn btn-outline-secondary btn-sm me-2 d-none d-md-inline-block">
                     <i class="bi bi-arrow-counterclockwise me-1"></i> I-reset
@@ -229,6 +256,24 @@ function getActionStyle(string $action): array {
                             <div class="stat-mini-num"><?= number_format($errorCount) ?></div>
                             <div class="stat-mini-label">Errors / Fails</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Chart -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="fw-bold mb-0">Activity Peak Insights</h6>
+                        <small class="text-muted">System load analysis for the last <?= $trendDays ?> days</small>
+                    </div>
+                    <div class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" style="background: rgba(13, 110, 253, 0.1) !important;">
+                        <i class="bi bi-stars me-1"></i> AI Optimization Suggestion Active
+                    </div>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div style="height: 220px;">
+                        <canvas id="auditTrendChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -463,6 +508,57 @@ document.querySelectorAll('select[name="action"], select[name="target_type"], se
             this.closest('form').submit();
         });
     });
+
+// Audit Trend Chart
+const ctx = document.getElementById('auditTrendChart').getContext('2d');
+const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+gradient.addColorStop(0, 'rgba(13, 110, 253, 0.2)');
+gradient.addColorStop(1, 'rgba(13, 110, 253, 0)');
+
+new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: <?= json_encode($dates) ?>,
+        datasets: [{
+            label: 'System Actions',
+            data: <?= json_encode($counts) ?>,
+            borderColor: '#0d6efd',
+            borderWidth: 3,
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#0d6efd',
+            pointHoverRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1e293b',
+                padding: 12,
+                cornerRadius: 8,
+                titleFont: { size: 13, weight: 'bold' },
+                bodyFont: { size: 12 }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                grid: { color: '#f1f5f9' },
+                ticks: { font: { size: 11 } }
+            },
+            x: {
+                grid: { display: false },
+                ticks: { font: { size: 11 } }
+            }
+        }
+    }
+});
 </script>
 </body>
 </html>

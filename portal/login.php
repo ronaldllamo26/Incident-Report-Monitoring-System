@@ -290,6 +290,7 @@ $success = $_GET['success'] ?? '';
         </div>
     </div>
 
+
     <!-- Login card -->
     <div class="login-card">
 
@@ -384,5 +385,10 @@ function togglePassword() {
     }
 }
 </script>
+    <div style="position: fixed; bottom: 20px; left: 0; right: 0; text-align: center; z-index: 10;">
+        <a href="/irms/public/privacy.php" class="text-muted small text-decoration-none" style="opacity: 0.7;">
+            <i class="bi bi-shield-check me-1"></i> Privacy Policy & Terms
+        </a>
+    </div>
 </body>
 </html>

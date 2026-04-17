@@ -35,150 +35,121 @@ $stLabel  = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
         :root {
-            --qc-blue: #1e293b;
-            --qc-red:  #CE1126;
-            --navy: #0f172a; --navy2: #1e293b; --accent: var(--qc-red);
-            --muted: #94a3b8; --border: rgba(255,255,255,0.08);
+            --primary: #2563eb;
+            --bg-main: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
         }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; margin: 0; }
 
-        /* ── Topbar ─────────────────────────────────────────── */
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            line-height: 1.5;
+        }
+
+        /* ── Navigation ── */
         .topbar {
-            background: var(--qc-blue); padding: 0;
-            position: sticky; top: 0; z-index: 200;
-            border-bottom: 3px solid var(--qc-red);
-            box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 1000;
         }
-        .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px;
-                        display: flex; align-items: center; justify-content: space-between; height: 58px; }
-        .brand { font-size: 18px; font-weight: 800; color: #fff; text-decoration: none;
-                 display: flex; align-items: center; gap: 8px; }
-        .brand span { color: var(--accent); }
-        .citizen-pill { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
-                        color: #a5b4fc; font-size: 10px; font-weight: 700; padding: 3px 9px;
-                        border-radius: 20px; letter-spacing: 0.5px; }
+        .topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 24px;
+                        display: flex; align-items: center; justify-content: space-between; height: 64px; }
+        .brand { font-size: 18px; font-weight: 800; color: var(--text-main); text-decoration: none;
+                 display: flex; align-items: center; gap: 10px; }
+        .brand span { color: var(--primary); }
+        .citizen-pill { background: #eff6ff; border: 1px solid #dbeafe;
+                        color: var(--primary); font-size: 10px; font-weight: 700; padding: 2px 10px;
+                        border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* Profile dropdown */
-        .profile-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
-                       color: #fff; border-radius: 10px; padding: 6px 12px; cursor: pointer;
+        /* Profile Btn */
+        .profile-btn { background: none; border: 1px solid var(--border);
+                       color: var(--text-main); border-radius: 8px; padding: 6px 12px; cursor: pointer;
                        display: flex; align-items: center; gap: 8px; font-size: 13px;
-                       font-weight: 600; transition: background 0.2s; position: relative; }
-        .profile-btn:hover { background: rgba(255,255,255,0.12); }
-        .profile-avatar { width: 28px; height: 28px; background: var(--accent);
+                       font-weight: 600; transition: all 0.2s; }
+        .profile-btn:hover { background: #f1f5f9; }
+        .profile-avatar { width: 26px; height: 26px; background: var(--primary);
                           border-radius: 50%; display: flex; align-items: center;
-                          justify-content: center; font-size: 12px; font-weight: 800; color: #fff; }
+                          justify-content: center; font-size: 11px; font-weight: 800; color: #fff; }
+
         .profile-dropdown {
-            position: absolute; top: calc(100% + 10px); right: 0;
-            background: #fff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
-            border: 1px solid #e2e8f0; min-width: 200px; overflow: hidden;
-            opacity: 0; visibility: hidden; transform: translateY(-8px);
-            transition: all 0.2s; z-index: 300;
+            position: absolute; top: calc(100% + 8px); right: 0;
+            background: #fff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid var(--border); min-width: 220px; overflow: hidden;
+            opacity: 0; visibility: hidden; transform: translateY(-5px);
+            transition: all 0.2s; z-index: 1100;
         }
         .profile-dropdown.open { opacity: 1; visibility: visible; transform: translateY(0); }
-        .dropdown-header { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; }
-        .dropdown-header .name { font-size: 13px; font-weight: 700; color: #0f172a; }
-        .dropdown-header .email { font-size: 11px; color: #64748b; }
-        .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-                                font-size: 13px; color: #374151; text-decoration: none;
-                                transition: background 0.15s; cursor: pointer; border: none;
-                                background: none; width: 100%; }
-        .dropdown-item-custom:hover { background: #f8fafc; color: #1e293b; }
-        .dropdown-item-custom.danger { color: #dc2626; }
-        .dropdown-item-custom.danger:hover { background: #fef2f2; }
-        .dropdown-divider { height: 1px; background: #f1f5f9; }
+        .dropdown-item-custom { display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+                                font-size: 13px; color: var(--text-main); text-decoration: none;
+                                transition: background 0.2s; border: none; background: none; width: 100%; text-align: left; }
+        .dropdown-item-custom:hover { background: #f8fafc; }
 
-        /* ── Welcome Hero ───────────────────────────────────── */
-        .hero {
-            background: linear-gradient(135deg, #1e293b 0%, #111827 100%);
-            position: relative; overflow: hidden; padding: 28px 0;
-        }
-        .hero::before {
-            content: ''; position: absolute; top: -40%; right: -10%; width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(239,68,68,0.15) 0%, transparent 70%);
-            border-radius: 50%;
-        }
-        .hero-content { max-width: 1200px; margin: 0 auto; padding: 0 20px;
-                        display: flex; justify-content: space-between; align-items: center;
-                        flex-wrap: wrap; gap: 16px; position: relative; }
-        .hero h5 { color: #fff; font-size: 20px; font-weight: 800; margin: 0 0 4px; }
-        .hero p { color: var(--muted); font-size: 13px; margin: 0; }
+        /* ── Hero ── */
+        .hero { padding: 40px 0 20px; }
+        .hero-content { max-width: 1200px; margin: 0 auto; padding: 0 24px;
+                        display: flex; justify-content: space-between; align-items: center; }
+        .hero h2 { font-size: 24px; font-weight: 800; margin: 0; }
+        .hero p { color: var(--text-muted); font-size: 14px; margin: 5px 0 0; }
+        
         .btn-new-report {
-            background: var(--accent); color: #fff; border: none;
-            padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 700;
-            text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
-            transition: all 0.2s; white-space: nowrap;
+            background: var(--primary); color: #fff; border: none;
+            padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            transition: background 0.2s;
         }
-        .btn-new-report:hover { background: #dc2626; color: #fff; transform: translateY(-1px);
-                                box-shadow: 0 6px 20px rgba(239,68,68,0.35); }
+        .btn-new-report:hover { background: #1d4ed8; color: #fff; }
 
-        /* ── Stat Cards ─────────────────────────────────────── */
-        .stat-card { background: #fff; border-radius: 12px; padding: 18px 20px;
-                     border: 1px solid #e2e8f0; transition: transform 0.2s, box-shadow 0.2s;
-                     cursor: pointer; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-        .stat-card.active-filter { border-color: #1e293b; box-shadow: 0 0 0 3px rgba(30,41,59,0.10); }
-        .stat-num { font-size: 30px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
-        .stat-label { font-size: 12px; color: #64748b; font-weight: 500; }
+        /* ── Stats ── */
+        .stat-card { background: #fff; border: 1px solid var(--border);
+                     padding: 20px; border-radius: 12px; transition: all 0.2s; cursor: pointer; }
+        .stat-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .stat-card.active-filter { border-color: var(--primary); background: #eff6ff; }
+        .stat-num { font-size: 28px; font-weight: 800; margin-bottom: 2px; }
+        .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* ── Reports Table Card ─────────────────────────────── */
-        .reports-card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-                        border: 1px solid #e2e8f0; overflow: hidden; }
-        .reports-card-header {
-            padding: 16px 20px; border-bottom: 1px solid #f1f5f9;
-            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-        }
+        /* ── Table Card ── */
+        .reports-card { background: #fff; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; margin-top: 24px; }
+        .reports-card-header { padding: 20px 24px; border-bottom: 1px solid var(--border); 
+                               display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
 
-        /* ── Filter Tabs ────────────────────────────────────── */
-        .filter-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+        /* ── Filters & Search ── */
+        .filter-tabs { display: flex; gap: 6px; }
         .filter-tab {
-            padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-            border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b;
-            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+            padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+            border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+            cursor: pointer; transition: all 0.2s;
         }
-        .filter-tab:hover { border-color: #1e293b; color: #1e293b; background: rgba(30,41,59,0.05); }
-        .filter-tab.active { background: #1e293b; border-color: #1e293b; color: #fff; }
-
-        /* ── Search Bar ─────────────────────────────────────── */
-        .search-box { position: relative; }
+        .filter-tab.active { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+        
         .search-box input {
-            padding: 7px 12px 7px 34px; border: 1.5px solid #e2e8f0;
-            border-radius: 8px; font-size: 13px; outline: none;
-            transition: border-color 0.2s; background: #f8fafc; min-width: 200px;
+            background: #f8fafc; border: 1px solid var(--border);
+            padding: 8px 12px 8px 36px; border-radius: 8px; font-size: 13px; width: 240px;
         }
-        .search-box input:focus { border-color: #3b82f6; background: #fff; }
-        .search-box .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-                                   color: #94a3b8; font-size: 13px; }
+        .search-box .search-icon { color: var(--text-muted); left: 12px; }
 
-        /* ── Table ──────────────────────────────────────────── */
-        .table th { font-size: 11px; font-weight: 700; color: #64748b;
-                    text-transform: uppercase; letter-spacing: 0.5px; }
-        .table td { font-size: 13px; vertical-align: middle; }
-        .tracking-chip { font-size: 11px; background: #f1f5f9; color: #475569;
-                         padding: 2px 8px; border-radius: 6px; font-family: monospace;
-                         font-weight: 600; letter-spacing: 0.5px; }
-        .row-hidden { display: none; }
+        /* ── Table ── */
+        .table thead th { background: #f8fafc; color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 16px 20px; }
+        .table tbody td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        
+        .tracking-chip { background: #f1f5f9; color: var(--text-main); padding: 3px 8px; border-radius: 4px; font-family: monospace; font-weight: 700; border: 1px solid var(--border); }
 
-        /* ── Empty State ────────────────────────────────────── */
-        .empty-state { text-align: center; padding: 60px 20px; }
-        .empty-icon { font-size: 48px; color: #cbd5e1; margin-bottom: 12px; }
-
-        /* ── Quick Links ────────────────────────────────────── */
+        /* ── Quick Links ── */
         .quick-link {
-            display: flex; align-items: center; gap: 12px; padding: 16px;
-            background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
-            text-decoration: none; color: #1e293b; transition: all 0.2s;
+            background: #fff; border: 1px solid var(--border); padding: 20px; border-radius: 12px;
+            color: var(--text-main); text-decoration: none; transition: all 0.2s; display: block;
         }
-        .quick-link:hover { border-color: currentColor; transform: translateY(-1px);
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.07); }
-        .quick-link-icon { width: 40px; height: 40px; border-radius: 10px;
-                           display: flex; align-items: center; justify-content: center;
-                           font-size: 18px; flex-shrink: 0; }
-        .ql-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-        .ql-sub { font-size: 11px; color: #64748b; }
+        .quick-link:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .quick-link-icon { font-size: 20px; margin-bottom: 12px; color: var(--primary); }
+        .ql-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .ql-sub { font-size: 11px; color: var(--text-muted); }
 
-        .main-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+        .main-wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
     </style>
 </head>
 <body>
@@ -368,11 +339,25 @@ $stLabel  = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' 
                                 <?= date('M d, Y', strtotime($r['reported_at'])) ?>
                             </td>
                             <td class="text-center">
-                                <a href="/irms/citizen/view_report.php?id=<?= $r['id'] ?>"
-                                   class="btn btn-outline-primary btn-sm"
-                                   title="Tingnan">
-                                    <i class="bi bi-eye"></i>
-                                </a>
+                                <div class="d-flex justify-content-center gap-1">
+                                    <a href="/irms/citizen/view_report.php?id=<?= $r['id'] ?>"
+                                       class="btn btn-outline-primary btn-sm"
+                                       title="Tingnan">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <?php if ($r['status'] === 'resolved' && empty($r['rating'])): ?>
+                                        <button type="button" 
+                                                class="btn btn-warning btn-sm fw-bold"
+                                                onclick="openFeedbackModal(<?= $r['id'] ?>, '<?= addslashes($r['title']) ?>')"
+                                                title="Mag-rate">
+                                            <i class="bi bi-star-fill"></i>
+                                        </button>
+                                    <?php elseif (!empty($r['rating'])): ?>
+                                        <span class="badge bg-light text-warning border" title="Naka-rate na">
+                                            <?= $r['rating'] ?> <i class="bi bi-star-fill"></i>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -388,40 +373,34 @@ $stLabel  = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' 
     </div>
 
     <!-- ── Quick Links ────────────────────────────────────────── -->
-    <div class="row g-3">
+    <div class="row g-4 mt-2">
         <div class="col-md-4">
-            <a href="/irms/public/track.php" class="quick-link" style="color:#3b82f6;">
-                <div class="quick-link-icon" style="background:#eff6ff;">
-                    <i class="bi bi-search" style="color:#3b82f6;"></i>
-                </div>
-                <div>
-                    <div class="ql-title">I-track ang Report</div>
-                    <div class="ql-sub">Gamit ang tracking number</div>
-                </div>
+            <a href="/irms/public/track.php" class="quick-link">
+                <div class="quick-link-icon"><i class="bi bi-search"></i></div>
+                <div class="ql-title">I-track ang Report</div>
+                <div class="ql-sub">Mabilisang pag-check gamit ang tracking number.</div>
             </a>
         </div>
         <div class="col-md-4">
-            <a href="/irms/citizen/settings.php" class="quick-link" style="color:#8b5cf6;">
-                <div class="quick-link-icon" style="background:#f5f3ff;">
-                    <i class="bi bi-person-gear" style="color:#8b5cf6;"></i>
-                </div>
-                <div>
-                    <div class="ql-title">I-edit ang Profile</div>
-                    <div class="ql-sub">Impormasyon at password</div>
-                </div>
+            <a href="/irms/citizen/settings.php" class="quick-link">
+                <div class="quick-link-icon"><i class="bi bi-person-gear"></i></div>
+                <div class="ql-title">I-edit ang Profile</div>
+                <div class="ql-sub">Baguhin ang iyong impormasyon at password.</div>
             </a>
         </div>
         <div class="col-md-4">
-            <a href="/irms/citizen/report.php" class="quick-link" style="color:#ef4444;">
-                <div class="quick-link-icon" style="background:#fef2f2;">
-                    <i class="bi bi-megaphone" style="color:#ef4444;"></i>
-                </div>
-                <div>
-                    <div class="ql-title">Mag-report ng Bago</div>
-                    <div class="ql-sub">Mag-file ng incident report</div>
-                </div>
+            <a href="/irms/citizen/report.php" class="quick-link">
+                <div class="quick-link-icon"><i class="bi bi-megaphone"></i></div>
+                <div class="ql-title">Mag-report ng Bago</div>
+                <div class="ql-sub">I-sumite ang iyong mga obserbasyon sa paligid.</div>
             </a>
         </div>
+    </div>
+
+    <div class="text-center mt-5 pt-4">
+        <a href="/irms/public/privacy.php" class="text-muted small text-decoration-none">
+            <i class="bi bi-shield-check me-1"></i> Privacy Policy & Terms of Service
+        </a>
     </div>
 
 </div><!-- /main-wrap -->
@@ -481,5 +460,148 @@ function applyFilter(searchQuery) {
     if (noResult) noResult.style.display = visible === 0 ? 'block' : 'none';
 }
 </script>
+    <!-- ── Privacy Consent Overlay (Standard for PWA/Mobile) ── -->
+    <div id="privacy-consent-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.95); z-index:999999; backdrop-filter:blur(10px); align-items:center; justify-content:center; padding:20px;">
+        <div style="background:#fff; width:100%; max-width:400px; border-radius:24px; padding:32px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center;">
+            <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" style="width:80px; margin-bottom:20px;" alt="QC Logo">
+            <h3 style="color:#0f172a; font-weight:800; margin-bottom:12px;">Maligayang Pagdating!</h3>
+            <p style="color:#64748b; font-size:14px; margin-bottom:24px;">
+                Upang maprotektahan ang iyong impormasyon alinsunod sa <strong>Data Privacy Act of 2012</strong>, kailangan naming makuha ang iyong pagsang-ayon sa aming Privacy Policy bago gamitin ang QC-ALERTO app.
+            </p>
+            <div style="background:#f8fafc; border-radius:12px; padding:16px; margin-bottom:24px; text-align:left;">
+                <div style="font-size:12px; color:#1e293b; margin-bottom:8px;"><i class="bi bi-check-circle-fill text-success me-2"></i> Protektado ang iyong personal data.</div>
+                <div style="font-size:12px; color:#1e293b; margin-bottom:8px;"><i class="bi bi-check-circle-fill text-success me-2"></i> GPS location ay gagamitim lamang sa dispatch.</div>
+                <div style="font-size:12px; color:#1e293b;"><i class="bi bi-check-circle-fill text-success me-2"></i> Secure ang pag-upload ng ebidensya.</div>
+            </div>
+            <button onclick="agreeToPrivacy()" style="width:100%; background:#2563eb; color:#fff; border:none; padding:14px; border-radius:12px; font-weight:700; cursor:pointer; margin-bottom:12px;">
+                Sumasang-ayon ako (I Agree)
+            </button>
+            <a href="/irms/public/privacy.php" target="_blank" style="font-size:13px; color:#64748b; text-decoration:none;">
+                Basahin ang buong Privacy Policy
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function agreeToPrivacy() {
+            localStorage.setItem('qc_privacy_agreed', 'true');
+            document.getElementById('privacy-consent-overlay').style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                if (!localStorage.getItem('qc_privacy_agreed')) {
+                    document.getElementById('privacy-consent-overlay').style.display = 'flex';
+                }
+            }, 1000);
+        });
+    </script>
+    <!-- ── Feedback Modal ── -->
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius:20px;">
+                <div class="modal-header border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <i class="bi bi-chat-square-heart text-primary" style="font-size: 48px;"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Kumusta ang aming serbisyo?</h5>
+                    <p class="text-muted small mb-4" id="feedback-report-title"></p>
+                    
+                    <form id="feedbackForm">
+                        <input type="hidden" name="incident_id" id="feedback-incident-id">
+                        
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold d-block mb-3">I-rate ang aming response:</label>
+                            <div class="d-flex justify-content-center gap-3">
+                                <?php for($i=1; $i<=5; $i++): ?>
+                                    <label class="star-rating">
+                                        <input type="radio" name="rating" value="<?= $i ?>" required style="display:none;">
+                                        <i class="bi bi-star-fill fs-2 cursor-pointer star-icon" data-value="<?= $i ?>" style="color: #e2e8f0; transition: color 0.2s;"></i>
+                                    </label>
+                                <?php endfor; ?>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold d-block text-start">Iba pang komento (Optional):</label>
+                            <textarea name="comment" class="form-control border-0 bg-light" rows="3" 
+                                      placeholder="Ano ang masasabi mo sa bilis at kalidad ng aming serbisyo?" 
+                                      style="border-radius:12px; font-size:13px;"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold" style="border-radius:12px;">
+                            I-submit ang Feedback
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .star-icon.active { color: #f59e0b !important; }
+        .cursor-pointer { cursor: pointer; }
+    </style>
+
+    <script>
+        function openFeedbackModal(id, title) {
+            document.getElementById('feedback-incident-id').value = id;
+            document.getElementById('feedback-report-title').textContent = 'Para sa: ' + title;
+            
+            // Reset stars
+            document.querySelectorAll('.star-icon').forEach(s => s.classList.remove('active'));
+            document.getElementById('feedbackForm').reset();
+            
+            const modal = new bootstrap.Modal(document.getElementById('feedbackModal'));
+            modal.show();
+        }
+
+        // Star Interaction
+        document.querySelectorAll('.star-icon').forEach(star => {
+            star.addEventListener('click', function() {
+                const val = this.dataset.value;
+                document.querySelectorAll('.star-icon').forEach(s => {
+                    if (s.dataset.value <= val) s.classList.add('active');
+                    else s.classList.remove('active');
+                });
+                // Check the radio button
+                document.querySelector(`input[name="rating"][value="${val}"]`).checked = true;
+            });
+        });
+
+        // Submit Feedback
+        document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Isinusumite...';
+
+            const formData = new FormData(this);
+            fetch('/irms/ajax/submit_feedback.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Salamat sa iyong feedback! Malaking tulong ito para mapabuti ang ating serbisyo. ✨');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                    btn.disabled = false;
+                    btn.innerHTML = 'I-submit ang Feedback';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('May problema sa pag-submit. Pakisubukang muli.');
+                btn.disabled = false;
+                btn.innerHTML = 'I-submit ang Feedback';
+            });
+        });
+    </script>
 </body>
 </html>

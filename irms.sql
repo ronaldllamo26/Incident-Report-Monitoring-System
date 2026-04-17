@@ -72,6 +72,8 @@ CREATE TABLE incidents (
     acknowledged_at DATETIME DEFAULT NULL,
     resolved_at     DATETIME DEFAULT NULL,
     closed_at       DATETIME DEFAULT NULL,
+    rating          INT DEFAULT NULL,
+    citizen_feedback TEXT DEFAULT NULL,
     FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,

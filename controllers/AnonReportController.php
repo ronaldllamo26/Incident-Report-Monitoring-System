@@ -19,6 +19,15 @@ if (str_contains($_anonIp, ',')) {
     $_anonIp = trim(explode(',', $_anonIp)[0]);
 }
 
+// ── IRON DOME: HONEYPOT CHECK ────────────────────────────────
+// If 'website_url' is filled, it's a bot.
+if (!empty($_POST['website_url'])) {
+    logAudit($pdo, null, 'bot_blocked', 'firewall', null, "Honeypot triggered from IP: {$_anonIp}");
+    http_response_code(403);
+    die("Bot detected. Access denied.");
+}
+// ─────────────────────────────────────────────────────────────
+
 // ── BAN CHECK ────────────────────────────────────────────────
 $banCheck = $pdo->prepare("SELECT id FROM banned_ips WHERE ip_address = ?");
 $banCheck->execute([$_anonIp]);
@@ -44,6 +53,13 @@ $lng       = $_POST['longitude']         ?? null;
 $anonName  = trim($_POST['anon_name']    ?? '');
 $anonEmail = trim($_POST['anon_email']   ?? '');
 $anonPhone = trim($_POST['anon_phone']   ?? '');
+$consent   = $_POST['privacy_consent']    ?? '';
+
+if (!$consent) {
+    header('Location: /irms/public/report.php?error=' .
+           urlencode('Kailangan mong sumang-ayon sa Privacy Policy para makapag-submit ng report.'));
+    exit;
+}
 
 // Basic validation
 if (!$title || !$cat || !$severity || !$desc || !$location) {

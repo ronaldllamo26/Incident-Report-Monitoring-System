@@ -1,6 +1,9 @@
-const CACHE_NAME = 'qc-alerto-v1';
+const CACHE_NAME = 'qc-alerto-v2';
+const OFFLINE_URL = '/irms/offline.php';
+
 const ASSETS_TO_CACHE = [
   '/irms/index.php',
+  OFFLINE_URL,
   '/irms/assets/img/QC_LOGO_CIRCLE.png',
   '/irms/assets/img/QC_LOGO.png',
   '/irms/assets/img/QC_BANNER.png',
@@ -27,18 +30,21 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Stale-while-revalidate strategy (or Network first)
 self.addEventListener('fetch', event => {
-  // Only cache GET requests
-  if (event.request.method !== 'GET') return;
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.open(CACHE_NAME).then(cache => {
+          return cache.match(OFFLINE_URL);
+        });
+      })
+    );
+    return;
+  }
 
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request).then(response => {
-        if (response) {
-          return response; // Return cached version if offline
-        }
-      });
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });

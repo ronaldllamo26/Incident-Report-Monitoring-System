@@ -5,6 +5,13 @@ require_once __DIR__ . '/../models/Incident.php';
 require_once __DIR__ . '/../config/mailer.php';
 require_once __DIR__ . '/../includes/functions.php';
 requireRole(['responder', 'admin']);
+
+// ── DEBUG MODE: Pilitin nating lumabas ang error para mahuli ──
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+// ─────────────────────────────────────────────────────────────
+
 validate_csrf();
 
 $model  = new Incident();
@@ -94,15 +101,19 @@ if ($action === 'update_status') {
 
             $filename = uniqid('res_', true) . '.' . $check['ext'];
             if (move_uploaded_file($tmp, $uploadDir . $filename)) {
-                $pdo->prepare("
-                    INSERT INTO attachments (incident_id, file_name, file_path, file_type, stage)
-                    VALUES (?, ?, ?, ?, 'resolution')
-                ")->execute([
-                    $id,
-                    $_FILES['evidence']['name'][$i],
-                    'uploads/' . $filename,
-                    $check['mime'],
-                ]);
+                try {
+                    $pdo->prepare("
+                        INSERT INTO attachments (incident_id, file_name, file_path, file_type, stage)
+                        VALUES (?, ?, ?, ?, 'resolution')
+                    ")->execute([
+                        $id,
+                        $_FILES['evidence']['name'][$i],
+                        'uploads/' . $filename,
+                        $check['mime'],
+                    ]);
+                } catch (Exception $e) {
+                    error_log("Upload DB Error: " . $e->getMessage());
+                }
             }
         }
     }

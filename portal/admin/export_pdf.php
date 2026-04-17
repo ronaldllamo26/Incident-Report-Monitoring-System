@@ -47,91 +47,115 @@ ob_start();
 <head>
 <meta charset="UTF-8">
 <style>
-    @page { margin: 18mm 20mm 18mm 20mm; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    @page { margin: 20mm; }
+    * { box-sizing: border-box; }
     body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 10pt; color: #1e293b;
-           line-height: 1.5; background: #fff; }
+           line-height: 1.6; background: #fff; margin: 0; padding: 0; }
+    .wrapper { padding: 10mm; border: 1px solid #f1f5f9; }
 
     /* Header */
-    .page-header { border-bottom: 3px solid #1e293b; padding-bottom: 16px; margin-bottom: 24px; }
-    .header-top { display: block; width: 100%; overflow: hidden; margin-bottom: 12px; }
-    .header-left { float: left; }
-    .header-right { float: right; text-align: right; }
+    .page-header { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; }
+    .header-top { display: block; width: 100%; overflow: hidden; }
+    .header-left { float: left; width: 70%; }
+    .header-right { float: right; width: 30%; text-align: right; }
     .clear { clear: both; }
-    .org-name { font-size: 16pt; font-weight: bold; color: #1e293b; }
-    .org-sub { font-size: 9pt; color: #64748b; margin-top: 2px; }
-    .doc-type { font-size: 10pt; font-weight: bold; color: #CE1126;
-                text-transform: uppercase; letter-spacing: 1px; }
-    .gen-date { font-size: 8pt; color: #64748b; margin-top: 4px; }
+    
+    .gov-text { font-size: 8pt; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 2px; }
+    .org-name { font-size: 15pt; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+    .org-sub { font-size: 8.5pt; color: #475569; margin-top: 1px; font-weight: 500; }
+    
+    .doc-type { font-size: 11pt; font-weight: 900; color: #CE1126;
+                text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+    .gen-date { font-size: 7.5pt; color: #94a3b8; }
 
     /* Reference bar */
-    .ref-bar { background: #1e293b; color: #fff; padding: 12px 16px;
-               border-radius: 6px; margin-bottom: 24px; font-size: 9.5pt;
+    .ref-bar { background: #0f172a; color: #fff; padding: 10px 14px;
+               border-radius: 4px; margin-bottom: 20px; font-size: 9pt;
                overflow: hidden; }
     .ref-bar .left { float: left; }
     .ref-bar .right { float: right; }
 
     /* Status + Severity badges */
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 4px;
-             font-size: 8.5pt; font-weight: bold; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 3px;
+             font-size: 8pt; font-weight: bold; text-transform: uppercase; }
 
     /* Section heading */
-    .section-head { font-size: 9pt; font-weight: bold; color: #64748b;
-                    text-transform: uppercase; letter-spacing: 0.6px;
-                    border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;
-                    margin: 28px 0 14px; }
+    .section-head { font-size: 8.5pt; font-weight: 800; color: #334155;
+                    text-transform: uppercase; letter-spacing: 0.8px;
+                    background: #f1f5f9; padding: 6px 10px;
+                    border-left: 4px solid #0f172a;
+                    margin: 22px 0 12px; }
 
     /* Info table */
-    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-    .info-table td { padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 9.5pt; vertical-align: top; }
+    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+    .info-table td { padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 9pt; vertical-align: top; }
     .info-table tr:last-child td { border-bottom: none; }
-    .info-table .lbl { width: 160px; color: #64748b; font-weight: bold;
-                       font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.4px; padding-right: 16px; }
+    .info-table .lbl { width: 150px; color: #64748b; font-weight: 700;
+                       font-size: 8pt; text-transform: uppercase; padding-right: 12px; }
 
     /* Description box */
-    .desc-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
-                padding: 16px 18px; font-size: 9.5pt; line-height: 1.6; color: #374151; margin-bottom: 16px; }
+    .desc-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 4px;
+                padding: 12px 14px; font-size: 9pt; line-height: 1.5; color: #334155; margin-bottom: 12px; }
+
+    /* AI Formal Report Section */
+    .ai-report-box { 
+        background: #f8fafc; 
+        border: 1px dashed #cbd5e1; 
+        border-radius: 6px;
+        padding: 15px; 
+        font-family: 'Courier New', Courier, monospace; 
+        font-size: 8.5pt; 
+        color: #1e3a8a; 
+        line-height: 1.6;
+        margin-bottom: 20px;
+        white-space: pre-wrap;
+    }
 
     /* Timeline */
-    .tl-item { padding: 12px 0 12px 20px; border-left: 2px solid #e2e8f0;
-               position: relative; margin-bottom: 8px; }
-    .tl-dot { position: absolute; left: -6px; top: 16px; width: 10px; height: 10px;
-              border-radius: 50%; }
-    .tl-status { font-weight: bold; font-size: 10pt; }
-    .tl-meta { font-size: 8.5pt; color: #64748b; margin-top: 4px; }
-    .tl-remark { font-size: 9pt; color: #374151; background: #f8fafc;
-                 border: 1px solid #e2e8f0; border-radius: 5px;
-                 padding: 8px 12px; margin-top: 8px; }
+    .tl-item { padding: 8px 0 8px 18px; border-left: 1.5px solid #e2e8f0;
+               position: relative; margin-bottom: 4px; }
+    .tl-dot { position: absolute; left: -5.5px; top: 12px; width: 9px; height: 9px;
+              border-radius: 50%; border: 2px solid #fff; }
+    .tl-status { font-weight: bold; font-size: 9.5pt; color: #1e293b; }
+    .tl-meta { font-size: 8pt; color: #94a3b8; margin-top: 2px; }
+    .tl-remark { font-size: 8.5pt; color: #475569; font-style: italic; margin-top: 4px; padding-left: 4px; }
 
-    /* Response */
-    .response-item { border: 1px solid #e2e8f0; border-radius: 6px;
-                     padding: 12px 16px; margin-bottom: 12px; background: #fff; }
-    .response-name { font-weight: bold; font-size: 9.5pt; color: #1e293b; }
-    .response-date { font-size: 8.5pt; color: #64748b; margin-top: 2px; }
-    .response-msg  { font-size: 9.5pt; color: #374151; margin-top: 8px; line-height: 1.5; }
+    /* Evidence Gallery */
+    .evidence-grid { overflow: hidden; margin-top: 10px; }
+    .evidence-item { float: left; width: 31%; margin-right: 2%; margin-bottom: 10px; text-align: center; }
+    .evidence-img { width: 100%; height: 120px; object-fit: cover; border: 1px solid #e2e8f0; border-radius: 4px; }
+    .evidence-cap { font-size: 7pt; color: #94a3b8; margin-top: 4px; }
 
     /* Footer */
-    .page-footer { margin-top: 32px; border-top: 1px solid #e2e8f0;
-                   padding-top: 12px; font-size: 8pt; color: #94a3b8;
+    .page-footer { margin-top: 30px; border-top: 1px solid #e2e8f0;
+                   padding-top: 10px; font-size: 7.5pt; color: #94a3b8;
                    text-align: center; }
     .confidential { background: #fef2f2; border: 1px solid #fecaca;
-                    text-align: center; padding: 10px; font-size: 8.5pt;
-                    color: #991b1b; border-radius: 5px; margin-top: 24px; font-weight: bold; }
+                    text-align: center; padding: 8px; font-size: 8pt;
+                    color: #991b1b; border-radius: 4px; margin-top: 20px; font-weight: bold; 
+                    text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .signature-area { margin-top: 40px; overflow: hidden; }
+    .sig-box { float: left; width: 45%; border-top: 1px solid #000; padding-top: 5px; text-align: center; margin-top: 40px; }
+    .sig-label { font-size: 8pt; font-weight: bold; text-transform: uppercase; }
+    .sig-sub { font-size: 7pt; color: #64748b; }
 </style>
 </head>
 <body>
+<div class="wrapper">
 
 <!-- Header -->
 <div class="page-header">
     <div class="header-top">
         <div class="header-left">
+            <div class="gov-text">Republic of the Philippines &bull; Quezon City</div>
             <div class="org-name">QC-ALERTO</div>
-            <div class="org-sub">Quezon City Incident Report &amp; Monitoring System</div>
+            <div class="org-sub">Incident Report &amp; Monitoring System (IRMS)</div>
         </div>
         <div class="header-right">
-            <div class="doc-type">Incident Report</div>
-            <div class="gen-date">Generated: <?= $genDate ?></div>
-            <div class="gen-date">By: <?= htmlspecialchars(currentUser()['name']) ?></div>
+            <div class="doc-type">Case Spot Report</div>
+            <div class="gen-date">Case #<?= str_pad($id,6,'0',STR_PAD_LEFT) ?></div>
+            <div class="gen-date">Ref: <?= htmlspecialchars($trackingNum) ?></div>
         </div>
         <div class="clear"></div>
     </div>
@@ -140,9 +164,7 @@ ob_start();
 <!-- Reference Bar -->
 <div class="ref-bar">
     <div class="left">
-        <strong>Report #<?= str_pad($id,5,'0',STR_PAD_LEFT) ?></strong>
-        &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-        Tracking: <?= htmlspecialchars($trackingNum) ?>
+        <strong>SECURITY CLASSIFICATION:</strong> OFFICIAL RECORD
     </div>
     <div class="right">
         <span class="badge" style="background:<?= $stBg[$curSt]??'#f3f4f6' ?>;color:<?= $stColor[$curSt]??'#374151' ?>;">
@@ -150,137 +172,126 @@ ob_start();
         </span>
         &nbsp;
         <span class="badge" style="background:<?= $sevBg[$curSev]??'#f3f4f6' ?>;color:<?= $sevColor[$curSev]??'#374151' ?>;">
-            <?= $sevLabel[$curSev] ?? ucfirst($curSev) ?> Severity
+            <?= $sevLabel[$curSev] ?? ucfirst($curSev) ?> PRIORITY
         </span>
     </div>
     <div class="clear"></div>
 </div>
 
 <!-- Incident Info -->
-<div class="section-head">Incident Information</div>
+<div class="section-head">I. BASIC INCIDENT INFORMATION</div>
 <table class="info-table">
     <tr>
-        <td class="lbl">Title</td>
+        <td class="lbl">Incident Title</td>
         <td><strong><?= htmlspecialchars($inc['title']) ?></strong></td>
     </tr>
     <tr>
-        <td class="lbl">Category</td>
+        <td class="lbl">Category / Type</td>
         <td><?= htmlspecialchars($inc['category_name']) ?></td>
     </tr>
     <tr>
-        <td class="lbl">Location</td>
+        <td class="lbl">Incident Location</td>
         <td><?= htmlspecialchars($inc['location']) ?></td>
     </tr>
-    <?php if ($inc['latitude'] && $inc['longitude']): ?>
     <tr>
-        <td class="lbl">Coordinates</td>
-        <td><?= number_format($inc['latitude'],6) ?>, <?= number_format($inc['longitude'],6) ?></td>
+        <td class="lbl">Date/Time Reported</td>
+        <td><?= date('F j, Y — h:i A', strtotime($inc['reported_at'])) ?></td>
+    </tr>
+    <?php if ($inc['resolved_at']): ?>
+    <tr>
+        <td class="lbl">Date/Time Resolved</td>
+        <td><?= date('F j, Y — h:i A', strtotime($inc['resolved_at'])) ?></td>
     </tr>
     <?php endif; ?>
     <tr>
-        <td class="lbl">Date Reported</td>
-        <td><?= date('F j, Y g:i A', strtotime($inc['reported_at'])) ?></td>
+        <td class="lbl">Reported By</td>
+        <td><?= htmlspecialchars($inc['reporter_name'] ?: 'Anonymous') ?> (<?= $inc['is_anonymous'] ? 'Anonymous' : 'Registered Citizen' ?>)</td>
     </tr>
     <tr>
-        <td class="lbl">Current Status</td>
-        <td><strong><?= $stLabel[$curSt] ?? ucfirst($curSt) ?></strong></td>
+        <td class="lbl">Assigned Responder</td>
+        <td><?= htmlspecialchars($inc['responder_name'] ?: 'Pending Assignment') ?></td>
     </tr>
-    <tr>
-        <td class="lbl">Severity</td>
-        <td><?= $sevLabel[$curSev] ?? ucfirst($curSev) ?></td>
-    </tr>
-    <?php if ($inc['is_anonymous']): ?>
-    <tr>
-        <td class="lbl">Type</td>
-        <td>Anonymous Report</td>
-    </tr>
-    <?php endif; ?>
 </table>
 
-<!-- Description -->
-<div class="section-head">Description</div>
+<div class="section-head">II. NARRATIVE DESCRIPTION</div>
 <div class="desc-box"><?= nl2br(htmlspecialchars($inc['description'])) ?></div>
 
-<!-- Reporter Info -->
-<div class="section-head">Reporter Information</div>
-<table class="info-table">
-    <tr>
-        <td class="lbl">Name</td>
-        <td><?= htmlspecialchars($inc['reporter_name'] ?: 'Anonymous') ?></td>
-    </tr>
-    <?php if ($inc['reporter_email']): ?>
-    <tr>
-        <td class="lbl">Email</td>
-        <td><?= htmlspecialchars($inc['reporter_email']) ?></td>
-    </tr>
-    <?php endif; ?>
-    <?php if ($inc['reporter_phone']): ?>
-    <tr>
-        <td class="lbl">Phone</td>
-        <td><?= htmlspecialchars($inc['reporter_phone']) ?></td>
-    </tr>
-    <?php endif; ?>
-</table>
+<?php if (!empty($inc['ai_formal_report'])): ?>
+<div class="section-head">III. OFFICIAL DISCLOSURE (AI GENERATED)</div>
+<div class="ai-report-box"><?= htmlspecialchars($inc['ai_formal_report']) ?></div>
+<?php endif; ?>
 
-<!-- Assigned Responder -->
-<div class="section-head">Assigned Responder</div>
-<table class="info-table">
-    <tr>
-        <td class="lbl">Responder</td>
-        <td><?= htmlspecialchars($inc['responder_name'] ?: 'Unassigned') ?></td>
-    </tr>
-</table>
+<!-- Evidence Gallery (Optional - only if images exist) -->
+<?php 
+$images = array_filter($attachments, function($a) {
+    return str_contains($a['file_type'] ?? '', 'image');
+});
+if (!empty($images)):
+?>
+<div class="section-head">IV. DOCUMENTARY EVIDENCE / EXHIBITS</div>
+<div class="evidence-grid">
+    <?php 
+    $count = 0;
+    foreach ($images as $img): 
+        if ($count >= 6) break; // Limit to 6 for PDF space
+        $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/irms/' . $img['file_path'];
+    ?>
+    <div class="evidence-item">
+        <img src="<?= $fullPath ?>" class="evidence-img">
+        <div class="evidence-cap"><?= ucfirst($img['stage'] ?? 'Initial') ?> Attachment</div>
+    </div>
+    <?php $count++; endforeach; ?>
+    <div class="clear"></div>
+</div>
+<?php endif; ?>
 
-<!-- Status Timeline -->
-<div class="section-head">Status History</div>
+<div class="section-head">V. CASE LIFELINE / ACTION TAKEN</div>
 <?php if (empty($logs)): ?>
-    <p style="font-size:9pt;color:#94a3b8;">Walang status change log.</p>
+    <p style="font-size:8.5pt;color:#94a3b8;padding-left:10px;">No historical actions recorded.</p>
 <?php else: ?>
-    <?php foreach ($logs as $log):
+    <?php foreach (array_slice(array_reverse($logs), 0, 8) as $log): // Show last 8 actions
         $dotColor = $tlColor[$log['new_status']] ?? '#64748b';
         $statusText = $stLabel[$log['new_status']] ?? ucwords(str_replace('_',' ',$log['new_status']));
     ?>
     <div class="tl-item">
-        <div class="tl-dot" style="background:<?= $dotColor ?>;border:2px solid #fff;box-shadow:0 0 0 2px <?= $dotColor ?>;"></div>
+        <div class="tl-dot" style="background:<?= $dotColor ?>;"></div>
         <div class="tl-status"><?= $statusText ?></div>
         <div class="tl-meta">
-            <?= date('F j, Y — g:i A', strtotime($log['changed_at'])) ?>
-            <?php if (!empty($log['changed_by_name'])): ?>
-                &bull; <?= htmlspecialchars($log['changed_by_name']) ?>
-            <?php endif; ?>
+            <?= date('M d, Y · h:i A', strtotime($log['changed_at'])) ?> 
+            &bull; Action by: <?= htmlspecialchars($log['changed_by_name'] ?? 'System/AI') ?>
         </div>
         <?php if ($log['remarks']): ?>
-            <div class="tl-remark"><?= htmlspecialchars($log['remarks']) ?></div>
+            <div class="tl-remark">"<?= htmlspecialchars($log['remarks']) ?>"</div>
         <?php endif; ?>
     </div>
     <?php endforeach; ?>
 <?php endif; ?>
 
-<!-- Responses -->
-<?php if (!empty($responses)): ?>
-<div class="section-head">Responder Updates / Messages</div>
-<?php foreach ($responses as $r): ?>
-    <div class="response-item">
-        <div class="response-name"><?= htmlspecialchars($r['responder_name']) ?></div>
-        <div class="response-date"><?= date('F j, Y — g:i A', strtotime($r['responded_at'])) ?></div>
-        <div class="response-msg"><?= nl2br(htmlspecialchars($r['message'])) ?></div>
+<div class="signature-area">
+    <div class="sig-box" style="float:left;">
+        <div class="sig-label"><?= htmlspecialchars(currentUser()['name']) ?></div>
+        <div class="sig-sub">Authorized Administrator</div>
+        <div class="sig-sub">QC-ALERTO Digital Signature</div>
     </div>
-<?php endforeach; ?>
-<?php endif; ?>
+    <div class="sig-box" style="float:right;">
+        <div class="sig-label" style="color:#e2e8f0;">__________________________</div>
+        <div class="sig-sub">Receiving Officer / Supervisor</div>
+        <div class="sig-sub">Date &amp; Time Signed</div>
+    </div>
+    <div class="clear"></div>
+</div>
 
-<!-- Confidentiality Notice -->
 <div class="confidential">
-    CONFIDENTIAL — For official use only. This document is generated by the QC-ALERTO system.
-    Unauthorized distribution is prohibited.
+    Official Record — Prepared using QC-ALERTO IRMS AI Engine.
+    Data integrity verified via system logs.
 </div>
 
-<!-- Footer -->
 <div class="page-footer">
-    QC-ALERTO — Quezon City Incident Report &amp; Monitoring System
-    &nbsp;&bull;&nbsp; Report #<?= str_pad($id,5,'0',STR_PAD_LEFT) ?>
-    &nbsp;&bull;&nbsp; Generated <?= $genDate ?>
+    Quezon City Incident Report &amp; Monitoring System &bull; Case #<?= str_pad($id,6,'0',STR_PAD_LEFT) ?>
+    &bull; Page 1 of 1
 </div>
 
+</div> <!-- end wrapper -->
 </body>
 </html>
 <?php
@@ -288,7 +299,7 @@ $html = ob_get_clean();
 
 // ── Render PDF ─────────────────────────────────────────────
 $options = new Options();
-$options->set('isRemoteEnabled', false);
+$options->set('isRemoteEnabled', true); // Enabled for local image paths if using full paths
 $options->set('defaultFont', 'DejaVu Sans');
 
 $dompdf = new Dompdf($options);
@@ -296,5 +307,6 @@ $dompdf->loadHtml($html);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 
-$filename = 'QC-ALERTO_Report_' . str_pad($id,5,'0',STR_PAD_LEFT) . '_' . date('Ymd') . '.pdf';
+$filename = 'QC-ALERTO_SpotReport_' . str_pad($id,6,'0',STR_PAD_LEFT) . '_' . date('Ymd') . '.pdf';
 $dompdf->stream($filename, ['Attachment' => true]);
+exit;

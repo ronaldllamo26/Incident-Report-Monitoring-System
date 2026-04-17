@@ -211,6 +211,12 @@ class AuthController {
         $confirm  = $_POST['confirm_password']      ?? '';
         $phone    = trim($_POST['phone']            ?? '');
         $address  = trim($_POST['address']          ?? '');
+        $consent  = $_POST['privacy_consent']       ?? '';
+
+        if (!$consent) {
+            $this->redirectWithError('Kailangan mong sumang-ayon sa Privacy Policy para makapag-register.', 'citizen', 'register');
+            return;
+        }
 
         if (empty($name) || empty($email) || empty($password)) {
             $this->redirectWithError('Punan ang lahat ng required fields.', 'citizen', 'register');

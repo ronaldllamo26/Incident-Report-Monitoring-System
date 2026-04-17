@@ -35,7 +35,8 @@
                 border:1px solid #e2e8f0;
                 border-radius:12px;
                 box-shadow:0 8px 32px rgba(0,0,0,0.12);
-                z-index:9999;
+                z-index:999999 !important;
+                transform: translateZ(999999px);
                 overflow:hidden;">
 
         <!-- Header -->
