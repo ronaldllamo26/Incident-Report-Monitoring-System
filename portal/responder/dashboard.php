@@ -200,7 +200,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
 
     <!-- Stat Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2" style="width: 20%;">
             <a href="?status=" class="stat-card <?= empty($_GET['status']) ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#f0f4ff;">
                     <i class="bi bi-clipboard-list" style="color:var(--qc-blue);"></i>
@@ -211,7 +211,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                 </div>
             </a>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2" style="width: 20%;">
             <a href="?status=pending" class="stat-card <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#fffbeb;">
                     <i class="bi bi-hourglass-split" style="color:#d97706;"></i>
@@ -222,7 +222,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                 </div>
             </a>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2" style="width: 20%;">
             <a href="?status=in_progress" class="stat-card <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#eff6ff;">
                     <i class="bi bi-arrow-repeat" style="color:#1d4ed8;"></i>
@@ -233,7 +233,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                 </div>
             </a>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-2" style="width: 20%;">
             <a href="?status=resolved" class="stat-card <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>" style="text-decoration:none;">
                 <div class="stat-icon" style="background:#f0fdf4;">
                     <i class="bi bi-check-circle" style="color:#16a34a;"></i>
@@ -241,6 +241,17 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                 <div>
                     <div class="stat-num"><?= $counts['resolved'] ?></div>
                     <div class="stat-lbl">Resolved</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-2" style="width: 20%;">
+            <a href="?status=closed" class="stat-card <?= ($_GET['status']??'') === 'closed' ? 'active' : '' ?>" style="text-decoration:none;">
+                <div class="stat-icon" style="background:#f3f4f6;">
+                    <i class="bi bi-lock-fill" style="color:#64748b;"></i>
+                </div>
+                <div>
+                    <div class="stat-num"><?= $counts['closed'] ?></div>
+                    <div class="stat-lbl">Closed</div>
                 </div>
             </a>
         </div>
@@ -259,6 +270,7 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                         <a href="?status=pending" class="ftab <?= ($_GET['status']??'') === 'pending' ? 'active' : '' ?>" style="text-decoration:none;">Pending (<?= $counts['pending'] ?>)</a>
                         <a href="?status=in_progress" class="ftab <?= ($_GET['status']??'') === 'in_progress' ? 'active' : '' ?>" style="text-decoration:none;">In Progress (<?= $counts['in_progress'] ?>)</a>
                         <a href="?status=resolved" class="ftab <?= ($_GET['status']??'') === 'resolved' ? 'active' : '' ?>" style="text-decoration:none;">Resolved (<?= $counts['resolved'] ?>)</a>
+                        <a href="?status=closed" class="ftab <?= ($_GET['status']??'') === 'closed' ? 'active' : '' ?>" style="text-decoration:none;">Closed (<?= $counts['closed'] ?>)</a>
                     </div>
                 </div>
                 <form method="GET" class="search-box">
@@ -268,10 +280,10 @@ $sevBg    = ['low' => '#f0fdf4', 'medium' => '#fffbeb', 'high' => '#fff7ed', 'cr
                 </form>
         </div>
 
-        <?php if (empty($incidents)): ?>
+        <?php if (empty($paginatedIncidents)): ?>
             <div class="empty-state">
                 <i class="bi bi-inbox" style="font-size:40px;color:#cbd5e1;display:block;margin-bottom:12px;"></i>
-                <p class="text-muted mb-0">Wala kang assigned na incident ngayon.</p>
+                <p class="text-muted mb-0">Wala kang nahanap na incident.</p>
             </div>
         <?php else: ?>
             <div class="table-responsive">

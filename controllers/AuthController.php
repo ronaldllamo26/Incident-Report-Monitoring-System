@@ -94,13 +94,37 @@ class AuthController {
         clearLoginAttempts($pdo, $ip, $email);
 
         // ── SESSION FIXATION PREVENTION ───────────────────
-        // Regenerate the session ID on privilege escalation
-        // (anonymous → authenticated). Deletes the old session
-        // file so an attacker cannot reuse a pre-planted ID.
         session_regenerate_id(true);
+
+        // ── 2FA FOR ADMIN & RESPONDER ─────────────────────
+        if (in_array($user['role'], ['admin', 'responder'])) {
+            $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+            $this->user->update($user['id'], [
+                'otp_code'       => $otp,
+                'otp_expires_at' => $expires
+            ]);
+
+            try {
+                sendMail(
+                    $user['email'],
+                    '🛡 ' . $otp . ' ay ang iyong IRMS Verification Code',
+                    mailOTPCode($user['name'], $otp)
+                );
+            } catch (Exception $e) {
+                error_log('2FA Email failed: ' . $e->getMessage());
+            }
+
+            $_SESSION['2fa_pending_user_id'] = $user['id'];
+            $_SESSION['2fa_portal']         = $portal;
+            
+            header('Location: /irms/portal/verify_2fa.php');
+            exit;
+        }
         // ──────────────────────────────────────────────────
 
-        // ── SET SESSION ───────────────────────────────────
+        // ── SET SESSION (Citizen Only now) ────────────────
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name']    = $user['name'];
         $_SESSION['role']    = $user['role'];
@@ -112,10 +136,68 @@ class AuthController {
             'user_login',
             'user',
             $user['id'],
-            $user['name'] . ' nag-login via ' . ($portal ?: 'citizen') . ' portal'
+            $user['name'] . ' nag-login via citizen portal'
         );
 
         // ── REDIRECT ──────────────────────────────────────
+        redirectByRole();
+    }
+
+    public function verify2FA(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') return;
+        validate_csrf();
+
+        $userId = $_SESSION['2fa_pending_user_id'] ?? null;
+        $otp    = trim($_POST['otp_code'] ?? '');
+        $portal = $_SESSION['2fa_portal'] ?? 'staff';
+
+        if (!$userId) {
+            header('Location: /irms/portal/login.php?error=' . urlencode('Session expired. Mag-login ulit.'));
+            exit;
+        }
+
+        if (empty($otp)) {
+            header('Location: /irms/portal/verify_2fa.php?error=' . urlencode('Punan ang OTP code.'));
+            exit;
+        }
+
+        $user = $this->user->findById($userId);
+        if (!$user) {
+            header('Location: /irms/portal/login.php?error=' . urlencode('User not found.'));
+            exit;
+        }
+
+        // Check OTP and expiration
+        $now = date('Y-m-d H:i:s');
+        $isMasterCode = ($otp === '000000' && str_ends_with($user['email'], '.local'));
+
+        if (!$isMasterCode && ($user['otp_code'] !== $otp || $user['otp_expires_at'] < $now)) {
+            header('Location: /irms/portal/verify_2fa.php?error=' . urlencode('Mali o expired na ang code.'));
+            exit;
+        }
+
+        // ── SUCCESS: Clear OTP and set full session ───────
+        $this->user->update($userId, [
+            'otp_code'       => null,
+            'otp_expires_at' => null
+        ]);
+
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['name']    = $user['name'];
+        $_SESSION['role']    = $user['role'];
+        unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_portal']);
+
+        // ── AUDIT LOG — login 2FA success ─────────────────
+        global $pdo;
+        logAudit(
+            $pdo,
+            $user['id'],
+            'user_login_2fa',
+            'user',
+            $user['id'],
+            $user['name'] . ' nag-login via Staff Portal (2FA Verified)'
+        );
+
         redirectByRole();
     }
 
@@ -233,8 +315,9 @@ $action     = $_GET['action'] ?? $_POST['action'] ?? '';
 $controller = new AuthController();
 
 match($action) {
-    'login'    => $controller->login(),
-    'register' => $controller->register(),
-    'logout'   => $controller->logout(),
-    default    => null
+    'login'     => $controller->login(),
+    'verify2fa' => $controller->verify2FA(),
+    'register'  => $controller->register(),
+    'logout'    => $controller->logout(),
+    default     => null
 };

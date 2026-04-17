@@ -50,9 +50,10 @@ class AIService {
         $score = current($scores);
 
         return [
-            'suggested_category' => ($score > 0) ? $bestMatch : null,
-            'is_critical'        => $isCritical,
-            'confidence'         => $score
+            'category'   => ($score > 0) ? $bestMatch : null,
+            'is_critical' => $isCritical,
+            'confidence'  => (float)$score,
+            'reason'      => ($score > 0) ? "Keyword match found for {$bestMatch}." : "No clear keywords detected."
         ];
     }
 
@@ -78,6 +79,23 @@ class AIService {
         $summary = "{$category} reported at {$shortLoc}. {$snippet}";
         
         return mb_strimwidth($summary, 0, 240, "...");
+    }
+
+    /**
+     * AI-Powered Professional Formal Report Generator
+     */
+    public static function generateFormalReport($category, $location, $description, $severity) {
+        $prompt = "As an Official Incident Auditor, generate a highly professional, clinical, and formal 2-paragraph official report for the following incident. 
+        Category: $category
+        Location: $location
+        Severity: $severity
+        Citizen Description: \"$description\"
+        
+        Tone: Official, legal-grade, objective. Use professional terminology (e.g., 'dispatch', 'situational containment', 'jurisdictional response').
+        Do not include headers or footers, just the 2 paragraphs of text.";
+
+        $response = self::callGroq($prompt);
+        return $response ?: "An official incident report has been registered for this case at {$location}. Initial containment measures and departmental coordination are in progress.";
     }
 
     /**
@@ -113,44 +131,88 @@ class AIService {
     }
 
     /**
-     * Generates a formal, government-standard English report.
+     * Classifies an incident using LLM (Groq) for high accuracy.
      */
-    public static function generateFormalReport($category, $location, $description, $severity) {
-        $locParts = explode(',', $location);
-        $shortLoc = trim($locParts[0] ?? 'the designated location');
-        
-        // High-level terminology mapping
-        $formalTerms = [
-            'Fire' => 'structural conflagration',
-            'Crime/Peace & Order' => 'alleged civilian altercation or public safety hazard',
-            'Medical Emergency' => 'urgent medical distress incident',
-            'Accident' => 'vehicular or civilian accident occurrence',
-            'Natural Disaster' => 'environmental hazard or natural calamity',
-            'Others' => 'miscellaneous public safety concern'
+    public static function classifyIncident($title, $description, $categories) {
+        require_once __DIR__ . '/../config/ai_config.php';
+        if (!defined('GROQ_API_KEY') || empty(GROQ_API_KEY)) {
+            return self::analyze($title, $description); // Fallback to keyword analysis
+        }
+
+        $catList = implode(', ', array_map(fn($c) => $c['name'], $categories));
+        $prompt = "Classify this incident based on Title and Description. 
+Title: {$title}
+Description: {$description}
+
+Available Categories: [{$catList}]
+Severities: [low, medium, high, critical]
+
+Return ONLY a JSON object:
+{
+  \"category\": \"Exact Name of Category\",
+  \"severity\": \"low/medium/high/critical\", 
+  \"confidence\": 0.0 to 1.0,
+  \"location_suggestion\": \"Extracted specific address or landmark (null if none)\",
+  \"confidence_location\": 0.0 to 1.0,
+  \"reason\": \"1-sentence explanation\"
+}";
+
+        $url = "https://api.groq.com/openai/v1/chat/completions";
+        $data = [
+            "model" => "llama-3.3-70b-versatile",
+            "messages" => [
+                ["role" => "system", "content" => "You are an incident classification expert. Return ONLY valid JSON."],
+                ["role" => "user", "content" => $prompt]
+            ],
+            "response_format" => ["type" => "json_object"],
+            "temperature" => 0.1
         ];
 
-        $term = $formalTerms[$category] ?? 'public safety incident';
-        $urgentText = match($severity) {
-            'critical' => 'Designated as a Critical emergency requiring immediate tactical intervention.',
-            'high' => 'Classified as High Urgency, prioritizing rapid response protocols.',
-            'medium' => 'Evaluated as Standard Priority for routine dispatch.',
-            default => 'Noted with Standard operational priority.'
-        };
+        $content = self::callGroq($prompt, true); // true means expect JSON
+        
+        if ($content) {
+            $parsed = json_decode($content, true);
+            if ($parsed) return $parsed;
+        }
 
-        // Attempt to extract more technical detail from description
-        $desc = strtolower($description);
-        $detail = "Reports indicate a situation requiring local authority presence.";
-        if (str_contains($desc, 'sunog') || str_contains($desc, 'apoy')) $detail = "Incident involves persistent structural thermal elements.";
-        if (str_contains($desc, 'magnanakaw') || str_contains($desc, 'nakawan')) $detail = "Subject involved in suspected unauthorized property acquisition.";
-        if (str_contains($desc, 'aksidente') || str_contains($desc, 'banggaan')) $detail = "Occurrence involves mechanical kinetic impact between varied entities.";
+        return self::analyze($title, $description); // Final fallback
+    }
 
-        $report = "OFFICIAL INCIDENT DISCLOSURE:\n\n";
-        $report .= "Primary dispatch was alerted to a suspected {$term} situated within the vicinity of {$shortLoc}. ";
-        $report .= "Upon evaluation, the event was {$urgentText} ";
-        $report .= "{$detail} ";
-        $report .= "All available departmental resources have been coordinated for immediate situational containment and resolution.";
+    /**
+     * AI-Driven Responder Matching
+     * Suggests the best responder based on incident context and available personnel.
+     */
+    public static function suggestResponder(string $title, string $category, array $availableResponders): ?int {
+        if (empty($availableResponders)) return null;
 
-        return $report;
+        $responderCtx = "";
+        foreach ($availableResponders as $r) {
+            $responderCtx .= "- ID: {$r['id']} | Name: {$r['name']}\n";
+        }
+
+        $prompt = "As an incident coordinator for Quezon City, analyze this report and pick the most appropriate responder from the list.
+        Incident: \"$title\" ($category)
+        
+        Responders Available:
+        $responderCtx
+        
+        Rules:
+        1. Fire/Electrical -> Prefer Fire/BFP related names.
+        2. Crime/Theft -> Prefer Police/PNP/Security names.
+        3. Medical -> Prefer Medical/Rescue/Ambulance.
+        4. Others -> Use highest relevance.
+        5. Return ONLY the integer ID of the best responder.";
+
+        $bestId = self::callGroq($prompt);
+        
+        // If the result is JSON or has text, extract digits
+        if (is_array($bestId)) {
+            return null;
+        }
+        
+        $cleanedId = preg_replace('/[^0-9]/', '', (string)$bestId);
+
+        return $cleanedId ? (int)$cleanedId : null;
     }
 
     /**
@@ -298,5 +360,43 @@ class AIService {
         if (str_contains($q, 'kumusta')) return "Mabuhay po, QCitizen! Ako ang QC-ALERTO Assistant. Ano po ang maipaglilingkod ko?";
         
         return "Magandang araw po! Ako ang inyong QC-ALERTO System Expert. Maaari niyo po akong tanungin tungkol sa **pag-report** o **pag-track**. Ano po ang maipaglilingkod ko, QCitizen?";
+    }
+
+    /**
+     * Internal helper for Groq API Communications
+     */
+    private static function callGroq($prompt, $isJson = false) {
+        if (!defined('GROQ_API_KEY') || empty(GROQ_API_KEY)) return null;
+        
+        $url = "https://api.groq.com/openai/v1/chat/completions";
+        $data = [
+            "model" => "llama-3.3-70b-versatile",
+            "messages" => [
+                ["role" => "system", "content" => $isJson ? "You are a data extraction expert. Return ONLY valid JSON." : "You are an incident response coordinator. Return only the requested value."],
+                ["role" => "user", "content" => $prompt]
+            ],
+            "temperature" => 0.1
+        ];
+
+        if ($isJson) {
+            $data["response_format"] = ["type" => "json_object"];
+        }
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . GROQ_API_KEY
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $result = json_decode($response, true);
+        return $result['choices'][0]['message']['content'] ?? null;
     }
 }

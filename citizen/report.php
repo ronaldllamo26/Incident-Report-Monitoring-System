@@ -225,7 +225,6 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                                 <label class="form-label small fw-medium">
                                     Kategorya <span class="text-danger">*</span>
                                 </label>
-                                <!-- DAGDAG: onchange="checkDuplicate()" -->
                                 <select name="category_id" class="form-select"
                                         onchange="checkDuplicate()" required>
                                     <option value="">-- Pumili ng kategorya --</option>
@@ -265,8 +264,9 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 
                         <!-- Location search -->
                         <div class="mb-3">
-                            <label class="form-label small fw-medium">
-                                Hanapin ang Lokasyon sa Quezon City <span class="text-danger">*</span>
+                            <label class="form-label small fw-medium d-flex justify-content-between align-items-center w-100">
+                                <span>Hanapin ang Lokasyon sa Quezon City <span class="text-danger">*</span></span>
+                                <span id="ai-location-badge" style="display:none;"></span>
                             </label>
                             <div class="search-wrapper">
                                 <div class="input-group">
@@ -461,11 +461,32 @@ window.checkInsideQC = function(lat, lng) {
 function pinLocation(lat, lng, label) {
     if (marker) map.removeLayer(marker);
     marker = L.marker([lat, lng]).addTo(map);
-    document.getElementById('latitude').value  = lat;
+
+    document.getElementById('latitude').value = lat;
     document.getElementById('longitude').value = lng;
-    document.getElementById('location-input').value = label || (lat.toFixed(5) + ', ' + lng.toFixed(5));
-    document.getElementById('pin-status').innerHTML =
-        '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+
+    const locInput = document.getElementById('location-input');
+    const pinStatus = document.getElementById('pin-status');
+
+    locInput.value = label || 'Kasalukuyang ina-analyze ang address...';
+    pinStatus.innerHTML = '<span class="text-muted" style="margin-left: 8px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> Finding address...</span>';
+
+    // ── REVERSE GEOCODING ──
+    if (typeof QCAlertAI !== 'undefined' && !label) {
+        const ai = new QCAlertAI();
+        ai.reverseGeocode(lat, lng).then(data => {
+            if (data && data.address) {
+                locInput.value = data.address;
+                document.getElementById('search-input').value = data.address.split(',')[0]; // Sync search box
+                pinStatus.innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+            } else {
+                locInput.value = lat.toFixed(5) + ", " + lng.toFixed(5);
+                pinStatus.innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+            }
+        });
+    } else {
+        pinStatus.innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+    }
     // ── DUPLICATE CHECK after pinning ──
     checkDuplicate();
 }
@@ -701,16 +722,18 @@ if (typeof QCAlertAI !== 'undefined') {
     const ai = new QCAlertAI();
     const titleInput = document.querySelector('input[name="title"]');
     const descInput = document.querySelector('textarea[name="description"]');
-    const categorySelect = document.querySelector('select[name="category_id"]');
-    const severitySelect = document.querySelector('select[name="severity"]');
+    const catSelect  = document.querySelector('select[name="category_id"]');
+    const sevSelect  = document.querySelector('select[name="severity"]');
+    const aiBadge    = document.getElementById('ai-suggestion-badge');
+    const locBadge   = document.getElementById('ai-location-badge');
     const dupWarning = document.getElementById('realtime-dup-warning');
 
-    if (titleInput && descInput && categorySelect && severitySelect) {
+    if (titleInput && descInput && catSelect && sevSelect) {
         // UI Elements for AI
         const aiBadge = document.createElement('div');
         aiBadge.id = 'ai-suggestion-badge';
         aiBadge.style.cssText = 'display:none;font-size:11px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 10px;border-radius:6px;margin-top:6px;font-weight:600;align-items:center;gap:6px;';
-        categorySelect.parentNode.appendChild(aiBadge);
+        catSelect.parentNode.appendChild(aiBadge);
 
         const urgencyAlert = document.createElement('div');
         urgencyAlert.id = 'ai-urgency-alert';
@@ -718,40 +741,64 @@ if (typeof QCAlertAI !== 'undefined') {
         urgencyAlert.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill fs-6"></i><div><strong>AI Emergency Detection:</strong> Napansin naming seryoso ang insidenteng ito. In-adjust namin ang severity sa <strong>Critical</strong>.</div></div>';
         if (dupWarning) dupWarning.after(urgencyAlert);
 
-        let hasAutoSetSeverity = false;
+        let aiTimeout = null;
 
-        function runAI() {
-            const combinedText = (titleInput.value + ' ' + descInput.value).trim();
-            if (combinedText.length < 3) {
+        async function runAI() {
+            const title = titleInput.value.trim();
+            const desc  = descInput.value.trim();
+
+            if (title.length < 5 || desc.length < 10) {
                 aiBadge.style.display = 'none';
-                urgencyAlert.classList.add('d-none');
+                locBadge.style.display = 'none';
                 return;
             }
 
-            const result = ai.analyze(combinedText);
-            
-            // 1. Suggest Category
-            if (result && result.category) {
-                aiBadge.innerHTML = 'AI Recommendation: <span class="fw-bold"> ' + result.category + '</span>';
-                aiBadge.style.display = 'flex';
+            aiBadge.innerHTML = '<span class="text-muted" style="font-size:10px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> AI analyzing...</span>';
+            aiBadge.style.display = 'block';
+
+            const data = await ai.analyzeAccurate(title, desc);
+
+            if (data && data.category_id) {
+                const conf = data.confidence;
+                if (conf >= 0.85) {
+                    // HIGH CONFIDENCE: Auto-select
+                    catSelect.value = data.category_id;
+                    sevSelect.value = data.severity;
+                    aiBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-robot me-1"></i> AI Verified</span>';
+                } else if (conf >= 0.60) {
+                    // MEDIUM CONFIDENCE: Suggest
+                    aiBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-none" style="font-size:10px;" 
+                        onclick="window.applyAI('${data.category_id}', '${data.severity}')">
+                        <i class="bi bi-lightbulb me-1"></i> Suggestion: ${data.ai_category_name}?
+                    </button>`;
+                } else {
+                    aiBadge.style.display = 'none';
+                }
             } else {
                 aiBadge.style.display = 'none';
             }
 
-            // 2. Detect Urgency
-            if (result && result.isEmergency) {
-                urgencyAlert.classList.remove('d-none');
-                if (!hasAutoSetSeverity) {
-                    severitySelect.value = 'critical';
-                    hasAutoSetSeverity = true;
-                }
+            // ── Location Suggestion ──
+            if (data && data.location_suggestion && data.confidence_location >= 0.70) {
+                locBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-success fw-bold text-decoration-none" style="font-size:10px;" 
+                    onclick="window.searchByAI('${data.location_suggestion}')">
+                    <i class="bi bi-geo-alt-fill me-1"></i> Auto-pin to: ${data.location_suggestion}?
+                </button>`;
+                locBadge.style.display = 'block';
             } else {
-                urgencyAlert.classList.add('d-none');
+                locBadge.style.display = 'none';
             }
         }
 
-        titleInput.addEventListener('input', runAI);
-        descInput.addEventListener('input', runAI);
+        window.applyAI = function(cid, sev) {
+            categorySelect.value = cid;
+            severitySelect.value = sev;
+            aiBadge.innerHTML = '<span class="badge bg-info text-dark"><i class="bi bi-check-circle me-1"></i> AI Applied</span>';
+            if (sev === 'critical') urgencyAlert.classList.remove('d-none');
+        };
+
+        titleInput.addEventListener('input', () => { clearTimeout(aiTimeout); aiTimeout = setTimeout(runAI, 1500); });
+        descInput.addEventListener('input', () => { clearTimeout(aiTimeout); aiTimeout = setTimeout(runAI, 1500); });
     }
 }
 </script>

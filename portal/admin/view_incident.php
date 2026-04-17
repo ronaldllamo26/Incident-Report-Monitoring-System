@@ -14,6 +14,19 @@ if (!$incident) {
     exit;
 }
 
+// ── AUTO-ESCALATION LOGIC ─────────────────────────────
+$sla = $model->getSlaStatus($incident);
+if ($sla['status'] === 'breached' && $incident['escalated'] == 0) {
+    $model->markEscalated($id);
+    // Log escalation
+    $pdo->prepare("INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks) 
+                   VALUES (?, NULL, ?, ?, '⚠️ Auto-Escalated: Deadline exceeded without resolution.')")
+        ->execute([$id, $incident['status'], $incident['status']]);
+    $incident['escalated'] = 1; // Sync local variable
+    $incident['sla_breached'] = 1;
+}
+// ──────────────────────────────────────────────────────
+
 $attachments = $model->getAttachments($id);
 $timeline    = $model->getFullTimeline($id);
 $feedback    = $model->getFeedback($id);
@@ -140,6 +153,31 @@ $error   = $_GET['error']   ?? '';
                 <!-- MAIN INFO COLUMN (KALIWA) -->
                 <div class="col-lg-8 col-xl-9">
 
+                    <!-- SLA MONITORING BAR -->
+                    <?php if ($incident['sla_deadline'] && !in_array($incident['status'], ['resolved','closed'])): ?>
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small fw-bold text-slate">
+                                    <i class="bi bi-stopwatch-fill me-1"></i> SLA Response Progress
+                                </span>
+                                <span class="badge <?= ($sla['status'] === 'breached' || $sla['status'] === 'warning') ? 'bg-danger' : 'bg-success' ?> small">
+                                    <?= $sla['label'] ?>
+                                </span>
+                            </div>
+                            <div class="progress" style="height: 10px; border-radius: 5px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated <?= ($sla['status'] === 'breached' || $sla['status'] === 'warning') ? 'bg-danger' : 'bg-success' ?>" 
+                                     role="progressbar" style="width: <?= $sla['percent'] ?>%;"></div>
+                            </div>
+                            <?php if ($incident['escalated']): ?>
+                                <div class="mt-2 text-danger small fw-bold">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> ESCALATED TO SENIOR ADMIN
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="card border-0 shadow-sm mb-4 overflow-hidden">
                         <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
                             <h6 class="fw-bold mb-0 text-slate">Detalyado ng Insidente</h6>
@@ -161,9 +199,15 @@ $error   = $_GET['error']   ?? '';
                             <?php endif; ?>
 
                             <h4 class="fw-bold text-slate mb-2"><?= htmlspecialchars($incident['title']) ?></h4>
-                            <div class="text-muted small mb-4 d-flex align-items-center gap-3">
+                            <div class="text-muted small mb-4 d-flex align-items-center gap-3 flex-wrap">
                                 <span><i class="bi bi-tag me-1"></i> <?= htmlspecialchars($incident['category_name']) ?></span>
-                                <span><i class="bi bi-calendar3 me-1"></i> <?= date('M d, Y g:i A', strtotime($incident['reported_at'])) ?></span>
+                                <span><i class="bi bi-calendar3 me-1"></i> Reported: <?= date('M d, Y g:i A', strtotime($incident['reported_at'])) ?></span>
+                                <?php if ($incident['resolved_at']): ?>
+                                    <span class="text-success"><i class="bi bi-check-circle me-1"></i> Resolved: <?= date('M d, Y g:i A', strtotime($incident['resolved_at'])) ?></span>
+                                <?php endif; ?>
+                                <?php if ($incident['closed_at']): ?>
+                                    <span class="text-secondary"><i class="bi bi-lock me-1"></i> Closed: <?= date('M d, Y g:i A', strtotime($incident['closed_at'])) ?></span>
+                                <?php endif; ?>
                             </div>
 
                             <p class="fs-6 text-slate mb-4" style="line-height: 1.7;">

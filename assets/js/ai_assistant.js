@@ -85,6 +85,48 @@ class QCAlertAI {
             isEmergency: isEmergency
         };
     }
+
+    /**
+     * Performs server-side LLM analyze for maximum accuracy.
+     */
+    async analyzeAccurate(title, description) {
+        if (!title || !description || title.length < 5 || description.length < 10) return null;
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+
+        try {
+            const response = await fetch('/irms/ajax/ai_analyze.php', {
+                method: 'POST',
+                body: formData
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('AI Analysis Error:', error);
+            // Fallback to local keyword analysis if server is down
+            const result = this.analyze(title + ' ' + description);
+            return {
+                category_id: null, // We can't map local names to IDs easily here without more config
+                severity: result.isEmergency ? 'critical' : 'medium',
+                confidence: result.confidence / 10,
+                is_local_fallback: true
+            };
+        }
+    }
+
+    /**
+     * Gets human-readable address from coordinates
+     */
+    async reverseGeocode(lat, lng) {
+        try {
+            const response = await fetch(`/irms/ajax/reverse_geocode.php?lat=${lat}&lng=${lng}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Reverse Geocode Error:', error);
+            return { address: lat.toFixed(5) + ', ' + lng.toFixed(5) };
+        }
+    }
 }
 
 // Global instance for browser

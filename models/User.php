@@ -106,4 +106,51 @@ class User {
 
         return 'verified';
     }
+    public function update(int $userId, array $fields): bool {
+        $set = [];
+        $params = [':id' => $userId];
+
+        foreach ($fields as $key => $val) {
+            $set[] = "{$key} = :{$key}";
+            $params[":{$key}"] = $val;
+        }
+
+        $sql = "UPDATE users SET " . implode(', ', $set) . " WHERE id = :id";
+        return $this->pdo->prepare($sql)->execute($params);
+    }
+    public function getAll(array $filters = []): array {
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['role'])) {
+            $where[] = "u.role = :role";
+            $params[':role'] = $filters['role'];
+        }
+
+        if (!empty($filters['agency'])) {
+            $where[] = "u.agency = :agency";
+            $params[':agency'] = $filters['agency'];
+        }
+
+        if (!empty($filters['search'])) {
+            $where[] = "(u.name LIKE :search OR u.email LIKE :search)";
+            $params[':search'] = "%{$filters['search']}%";
+        }
+
+        $sql = "
+            SELECT u.*, 
+                   (SELECT COUNT(*) FROM incidents WHERE reporter_id = u.id) AS report_count
+            FROM users u
+        ";
+
+        if ($where) {
+            $sql .= " WHERE " . implode(" AND ", $where);
+        }
+
+        $sql .= " ORDER BY u.created_at DESC";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }

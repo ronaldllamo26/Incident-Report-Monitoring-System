@@ -7,3 +7,6 @@
 Thumbs.db
 /node_modules/
 config/db.php
+config/ai_config.php
+# Debug Scripts
+/scratch/

@@ -117,7 +117,7 @@ $error   = $_GET['error']   ?? '';
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-3 small">#</th><th class="small">Incident</th><th class="small">Category</th>
-                                    <th class="small">Severity</th><th class="small">Status</th><th class="small">Assigned To</th>
+                                    <th class="small">Severity</th><th class="small">Status</th><th class="small">SLA / Deadline</th><th class="small">Assigned To</th>
                                     <th class="small">Date</th><th class="small">Actions</th>
                                 </tr>
                             </thead>
@@ -137,6 +137,18 @@ $error   = $_GET['error']   ?? '';
                                     <td><span class="badge bg-light text-dark border small"><?= htmlspecialchars($inc['category_name']) ?></span></td>
                                     <td><span class="badge bg-<?= $sevColor[$inc['severity']] ?> small"><?= ucfirst($inc['severity']) ?></span></td>
                                     <td><span class="badge bg-<?= $statusColor[$inc['status']] ?> small"><?= ucwords(str_replace('_',' ',$inc['status'])) ?></span></td>
+                                    <td>
+                                        <?php 
+                                        $sla = $model->getSlaStatus($inc);
+                                        $slaClass = 'bg-light text-dark';
+                                        if ($sla['status'] === 'breached') $slaClass = 'bg-danger';
+                                        if ($sla['status'] === 'warning')  $slaClass = 'bg-warning text-dark';
+                                        if ($sla['status'] === 'ok')       $slaClass = 'bg-success';
+                                        ?>
+                                        <span class="badge <?= $slaClass ?> small" style="font-size: 10px;">
+                                            <i class="bi bi-clock-history me-1"></i> <?= $sla['label'] ?>
+                                        </span>
+                                    </td>
                                     <td>
                                         <form action="/irms/ajax/assign_responder.php" method="POST" class="d-flex gap-1">
                         <?= csrf_field() ?>

@@ -139,6 +139,12 @@ class Incident {
             ")->execute([$incidentId]);
         }
 
+        if ($newStatus === 'closed') {
+            $this->pdo->prepare("
+                UPDATE incidents SET closed_at = NOW() WHERE id = ? AND closed_at IS NULL
+            ")->execute([$incidentId]);
+        }
+
         $log = $this->pdo->prepare("
             INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
             VALUES (?, ?, ?, ?, ?)
@@ -290,7 +296,20 @@ class Incident {
         };
 
         $slaDeadline      = date('Y-m-d H:i:s', time() + ($slaMinutes * 60));
-        $defaultResponder = $category['default_responder_id'];
+        
+        // ── SMART AI ASSIGNMENT ──────────────────────────
+        $activeResponders = $this->pdo->query("SELECT id, name FROM users WHERE role = 'responder' AND is_active = 1")->fetchAll();
+        $suggestedId = AIService::suggestResponder($incData['title'], $incData['category_name'], $activeResponders);
+        
+        $finalResponder = $suggestedId ?: $category['default_responder_id'];
+        
+        // If AI chose a valid responder from our active list, log it
+        if ($suggestedId) {
+            $this->pdo->prepare("
+                INSERT INTO status_logs (incident_id, changed_by, old_status, new_status, remarks)
+                VALUES (?, NULL, 'pending', 'pending', ?)
+            ")->execute([$incidentId, "✨ AI Dispatcher: Smart-matched this case to " . ($this->getResponderName($suggestedId) ?: "Personnel #".$suggestedId)]);
+        }
 
         $stmt = $this->pdo->prepare("
             UPDATE incidents
@@ -299,7 +318,13 @@ class Incident {
                 assigned_to  = COALESCE(?, assigned_to)
             WHERE id = ?
         ");
-        $stmt->execute([$slaDeadline, $priority, $defaultResponder, $incidentId]);
+        $stmt->execute([$slaDeadline, $priority, $finalResponder, $incidentId]);
+    }
+
+    private function getResponderName($id) {
+        $st = $this->pdo->prepare("SELECT name FROM users WHERE id = ?");
+        $st->execute([$id]);
+        return $st->fetchColumn();
     }
 
     public function getBreachedUnescalated(): array {

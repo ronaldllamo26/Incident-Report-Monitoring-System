@@ -14,6 +14,15 @@ The system features **QCitizen AI**, a high-speed assistant powered by the **Gro
 *   **Multi-Tier Fallback**: Automatic failover (Groq ➡️ Gemini ➡️ Smart Simulation) ensures 100% availability.
 *   **System-Aware**: Deep knowledge of IRMS modules (Ban Hammer, SLA, Evidence Hub).
 *   **Jurisdiction Logic**: Strictly localized to Quezon City boundaries.
+*   **Smart Responder Matching**: Automated assignment of incidents to the most qualified personnel using LLM analysis of incident context and personnel profiles.
+
+---
+
+## 🕒 Autonomous SLA Monitoring & Escalation
+QC-ALERTO ensures high accountability through automated response monitoring:
+*   **Live SLA Progress Bar**: Dynamic visual tracking of response health for every incident.
+*   **Auto-Escalation Engine**: Real-time identification of breached SLAs with automatic flagging for Senior Admin intervention.
+*   **Severity-Driven Deadlines**: Automated 24/7 deadline calculation adjusted based on incident criticality.
 
 ---
 
@@ -33,6 +42,8 @@ Security is at the core of QC-ALERTO. We implemented the **Iron Dome** defense s
 *   **PWA Ready**: Installable app experience for Android/iOS with offline presence.
 
 ### 🏢 Command & Control Center
+*   **SLA Crisis Monitor**: Real-time dashboard widget for tracking breached response times across the city.
+*   **Auto-Dispatcher**: AI-driven personnel assignment based on category-responder synergy.
 *   **SLA Monitoring**: Automated escalation tracking for critical responses.
 *   **Geospatial Visualization**: Real-time Leaflet.js heatmaps and incident tickers.
 *   **PDF Intelligence**: Instant professional reports for official documentation using Dompdf.

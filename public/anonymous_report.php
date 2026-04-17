@@ -207,8 +207,9 @@ $error = $_GET['error'] ?? '';
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-medium">
-                                    Kategorya <span class="text-danger">*</span>
+                                <label class="form-label small fw-medium d-flex justify-content-between align-items-center w-100">
+                                    <span>Kategorya <span class="text-danger">*</span></span>
+                                    <span id="ai-suggestion-badge" style="display:none;"></span>
                                 </label>
                                 <select name="category_id" class="form-select" required>
                                     <option value="">-- Pumili ng kategorya --</option>
@@ -243,8 +244,9 @@ $error = $_GET['error'] ?? '';
 
                         <!-- Location search -->
                         <div class="mb-3">
-                            <label class="form-label small fw-medium">
-                                Hanapin ang Lokasyon <span class="text-danger">*</span>
+                            <label class="form-label small fw-medium d-flex justify-content-between align-items-center w-100">
+                                <span>Hanapin ang Lokasyon <span class="text-danger">*</span></span>
+                                <span id="ai-location-badge" style="display:none;"></span>
                             </label>
                             <div class="search-wrapper">
                                 <div class="input-group">
@@ -351,6 +353,7 @@ $error = $_GET['error'] ?? '';
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/irms/assets/js/ai_assistant.js"></script>
 <script>
 // Fix Leaflet broken default icons when pulling from CDN
 delete L.Icon.Default.prototype._getIconUrl;
@@ -507,6 +510,37 @@ window.checkInsideQC = function(lat, lng) {
 };
 
 // ================= CLICK EVENTS =================
+function pinLocation(lat, lng, label) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat,lng]).addTo(map);
+
+    document.getElementById('latitude').value = lat;
+    document.getElementById('longitude').value = lng;
+
+    const locInput = document.getElementById('location-input');
+    const pinStatus = document.getElementById('pin-status');
+
+    locInput.value = label || 'Kasalukuyang ina-analyze ang address...';
+    pinStatus.innerHTML = '<span class="text-muted" style="margin-left: 8px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> Finding address...</span>';
+
+    // ── REVERSE GEOCODING ──
+    if (typeof QCAlertAI !== 'undefined' && !label) {
+        const ai = new QCAlertAI();
+        ai.reverseGeocode(lat, lng).then(data => {
+            if (data && data.address) {
+                locInput.value = data.address;
+                document.getElementById('search-input').value = data.address.split(',')[0]; // Sync search box
+                pinStatus.innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+            } else {
+                locInput.value = lat.toFixed(5) + ", " + lng.toFixed(5);
+                pinStatus.innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+            }
+        });
+    } else {
+        pinStatus.innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+    }
+}
+
 map.on('click', function (e) {
     if (!qcFeature) return;
 
@@ -519,16 +553,7 @@ map.on('click', function (e) {
     }
     
     document.getElementById('map-outside-alert').style.display = 'none';
-
-    if (marker) map.removeLayer(marker);
-    marker = L.marker(e.latlng).addTo(map);
-
-    document.getElementById('latitude').value = e.latlng.lat;
-    document.getElementById('longitude').value = e.latlng.lng;
-
-    // Auto-fill location dummy text so user doesn't have to guess
-    document.getElementById('location-input').value = e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
-    document.getElementById('pin-status').innerHTML = '<span class="text-success" style="margin-left: 8px;"><i class="bi bi-check-circle-fill"></i> Naka-pin na po!</span>';
+    pinLocation(e.latlng.lat, e.latlng.lng);
 });
 
 // Reset Map View
@@ -702,6 +727,81 @@ document.getElementById('report-form').addEventListener('submit', function(e) {
         alert('Hindi pwedeng mag-submit — ang lokasyon ay nasa labas ng Quezon City.');
     }
 });
+
+// ── AI AUTO-CATEGORIZATION (Refactored) ─────────────────
+if (typeof QCAlertAI !== 'undefined') {
+    const ai = new QCAlertAI();
+    let aiTimeout = null;
+    const titleInput = document.querySelector('input[name="title"]');
+    const descInput  = document.querySelector('textarea[name="description"]');
+    const catSelect  = document.querySelector('select[name="category_id"]');
+    const sevSelect  = document.querySelector('select[name="severity"]');
+    const aiBadge    = document.getElementById('ai-suggestion-badge');
+    const locBadge   = document.getElementById('ai-location-badge');
+
+    async function runAI() {
+        const title = titleInput.value.trim();
+        const desc  = descInput.value.trim();
+
+        if (title.length < 5 || desc.length < 10) {
+            aiBadge.style.display = 'none';
+            locBadge.style.display = 'none';
+            return;
+        }
+
+        aiBadge.innerHTML = '<span class="text-muted" style="font-size:10px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> AI analyzing...</span>';
+        aiBadge.style.display = 'block';
+
+        const data = await ai.analyzeAccurate(title, desc);
+
+        if (data && data.category_id) {
+            const conf = data.confidence;
+            if (conf >= 0.85) {
+                // HIGH CONFIDENCE: Auto-select
+                catSelect.value = data.category_id;
+                sevSelect.value = data.severity;
+                aiBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-robot me-1"></i> AI Verified</span>';
+            } else if (conf >= 0.60) {
+                // MEDIUM CONFIDENCE: Suggest
+                aiBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-none" style="font-size:10px;" 
+                    onclick="window.applyAI('${data.category_id}', '${data.severity}')">
+                    <i class="bi bi-lightbulb me-1"></i> Suggestion: ${data.ai_category_name}?
+                </button>`;
+            } else {
+                aiBadge.style.display = 'none';
+            }
+        } else {
+            aiBadge.style.display = 'none';
+        }
+
+        // ── Location Suggestion ──
+        if (data && data.location_suggestion && data.confidence_location >= 0.70) {
+            locBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-success fw-bold text-decoration-none" style="font-size:10px;" 
+                onclick="window.searchByAI('${data.location_suggestion}')">
+                <i class="bi bi-geo-alt-fill me-1"></i> Auto-pin to: ${data.location_suggestion}?
+            </button>`;
+            locBadge.style.display = 'block';
+        } else {
+            locBadge.style.display = 'none';
+        }
+    }
+
+    window.applyAI = function(cid, sev) {
+        catSelect.value = cid;
+        sevSelect.value = sev;
+        aiBadge.innerHTML = '<span class="badge bg-info text-dark" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> AI Applied</span>';
+    };
+
+    window.searchByAI = function(query) {
+        document.getElementById('search-input').value = query;
+        searchLocation();
+        locBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> Pinning...</span>';
+    };
+
+    [titleInput, descInput].forEach(el => {
+        el.addEventListener('input', () => { clearTimeout(aiTimeout); aiTimeout = setTimeout(runAI, 1500); });
+    });
+}
 
 function escHtml(str) {
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

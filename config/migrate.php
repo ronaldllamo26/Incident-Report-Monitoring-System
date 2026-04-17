@@ -31,6 +31,23 @@ $migrations = [
             KEY        idx_window_start (window_start)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ",
+
+    'add_2fa_columns' => "
+        ALTER TABLE users 
+        ADD COLUMN otp_code VARCHAR(10) DEFAULT NULL,
+        ADD COLUMN otp_expires_at DATETIME DEFAULT NULL;
+    ",
+
+    'add_flow_timestamps' => "
+        ALTER TABLE incidents
+        ADD COLUMN resolved_at DATETIME DEFAULT NULL,
+        ADD COLUMN closed_at DATETIME DEFAULT NULL;
+    ",
+
+    'add_attachment_stage' => "
+        ALTER TABLE attachments
+        ADD COLUMN stage ENUM('report', 'resolution') DEFAULT 'report';
+    ",
 ];
 
 // Track which migrations have run

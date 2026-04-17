@@ -266,6 +266,18 @@ $error   = $_GET['error']   ?? '';
                         <span class="info-label">Petsa</span>
                         <span class="info-val"><?= date('F j, Y — g:i A', strtotime($incident['reported_at'])) ?></span>
                     </div>
+                    <?php if ($incident['resolved_at']): ?>
+                    <div class="info-row">
+                        <span class="info-label">Na-resolve</span>
+                        <span class="info-val text-success fw-semibold"><?= date('M d, Y — g:i A', strtotime($incident['resolved_at'])) ?></span>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($incident['closed_at']): ?>
+                    <div class="info-row">
+                        <span class="info-label">Na-close</span>
+                        <span class="info-val text-muted"><?= date('M d, Y — g:i A', strtotime($incident['closed_at'])) ?></span>
+                    </div>
+                    <?php endif; ?>
                     <hr style="border-color:#f1f5f9;margin:14px 0;">
                     <p style="font-size:14px;color:#374151;line-height:1.7;margin:0;">
                         <?= nl2br(htmlspecialchars($incident['description'])) ?>

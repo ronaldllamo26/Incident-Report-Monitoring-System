@@ -118,6 +118,38 @@ function mailVerifyEmail(string $name, string $token, string $baseUrl = 'http://
     );
 }
 
+// ── TEMPLATE: 2FA OTP Code ─────────────────────────────
+function mailOTPCode(string $name, string $code): string {
+    return mailWrapper(
+        'Ang iyong 2FA Verification Code',
+        "
+        <p>Mahal na <strong>" . htmlspecialchars($name) . "</strong>,</p>
+        <p>May sumusubok na mag-login sa iyong <strong>IRMS — Staff Portal</strong> account.
+           Gamitin ang code sa ibaba para makumpleto ang verification.</p>
+
+        <div style='text-align:center;margin:32px 0;'>
+            <div style='background:#f8fafc;border:2px dashed #e2e8f0;
+                        padding:20px;display:inline-block;border-radius:12px;'>
+                <span style='font-size:32px;font-weight:800;letter-spacing:8px;
+                             color:#1e293b;font-family:monospace;'>{$code}</span>
+            </div>
+        </div>
+
+        <p style='font-size:13px;color:#666;text-align:center;'>
+            Ang code na ito ay valid lamang sa loob ng <strong>15 minuto</strong>.
+        </p>
+
+        <div style='background:#fff4f4;border-left:4px solid #ef4444;
+                    padding:12px 16px;margin:20px 0;border-radius:0 8px 8px 0;'>
+            <p style='font-size:12px;color:#991b1b;margin:0;'>
+                <strong>Babala:</strong> Kung hindi ikaw ang sumusubok mag-login,
+                iminumungkahi namin na i-reset agad ang iyong password sa lalong madaling panahon.
+            </p>
+        </div>
+        "
+    );
+}
+
 // ── TEMPLATE: Password Reset ───────────────────────────
 function mailPasswordReset(string $name, string $token, string $baseUrl = 'http://localhost'): string {
     $resetUrl = rtrim($baseUrl, '/') . '/irms/citizen/reset_password.php?token=' . urlencode($token);

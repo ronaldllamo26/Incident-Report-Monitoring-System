@@ -55,6 +55,14 @@ if ($action === 'update_status') {
                          ucwords(str_replace('_', ' ', $newStatus)) . '.'));
         exit;
     }
+
+    // ── ROLE ENFORCEMENT: ONLY ADMIN CAN CLOSE ────────
+    if ($newStatus === 'closed' && $_SESSION['role'] !== 'admin') {
+        header('Location: ' . $back . '&error=' .
+               urlencode('Bawal i-close ang incident. Admin lamang ang may karapatang gumawa nito pagkatapos ma-review ang resolution.'));
+        exit;
+    }
+    // ──────────────────────────────────────────────────
     // ──────────────────────────────────────────────────
 
     // ── MANDATORY RESOLUTION PROOF ────────────────────

@@ -56,6 +56,12 @@ class Firewall {
     }
 
     private static function enforceRateLimit($ip) {
+        // ── DEV BYPASS: Huwag i-limit ang localhost ─────────
+        if ($ip === '127.0.0.1' || $ip === '::1' || $ip === 'localhost') {
+            return;
+        }
+        // ──────────────────────────────────────────────────
+
         global $pdo;
         $action = 'GLOBAL_TRAFFIC';
         

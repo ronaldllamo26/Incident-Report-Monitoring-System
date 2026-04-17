@@ -16,6 +16,8 @@ CREATE TABLE users (
     phone       VARCHAR(20),
     address     VARCHAR(255),
     is_active   TINYINT(1) DEFAULT 1,
+    otp_code    VARCHAR(10) DEFAULT NULL,
+    otp_expires_at DATETIME DEFAULT NULL,
     created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -65,9 +67,11 @@ CREATE TABLE incidents (
     ai_formal_report TEXT DEFAULT NULL,
     sla_deadline  DATETIME DEFAULT NULL,
     priority      INT DEFAULT 3,
-    acknowledged_at DATETIME DEFAULT NULL,
     escalated     TINYINT(1) DEFAULT 0,
     sla_breached  TINYINT(1) DEFAULT 0,
+    acknowledged_at DATETIME DEFAULT NULL,
+    resolved_at     DATETIME DEFAULT NULL,
+    closed_at       DATETIME DEFAULT NULL,
     FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id),
     FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
@@ -83,6 +87,7 @@ CREATE TABLE attachments (
     file_name   VARCHAR(255) NOT NULL,
     file_path   VARCHAR(255) NOT NULL,
     file_type   VARCHAR(50),
+    stage       ENUM('report', 'resolution') DEFAULT 'report',
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE
 );
