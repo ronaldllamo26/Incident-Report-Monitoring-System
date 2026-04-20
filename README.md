@@ -10,11 +10,8 @@
 ---
 
 ## 🎥 System Demonstration
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/8f03cc0b-7940-404b-939d-a83dc300cb13" width="100%" controls autoplay muted loop>
-    Your browser does not support the video tag.
-  </video>
-</div>
+
+https://github.com/user-attachments/assets/8f03cc0b-7940-404b-939d-a83dc300cb13
 
 ---
 
