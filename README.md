@@ -1,23 +1,23 @@
 # 🚨 QC-ALERTO: Incident Report & Monitoring System (IRMS) 
 
-[![PHP v8.2](https://img.shields.io/badge/PHP-8.2-777bb4.svg?style=for-the-badge&logo=php)](https://www.php.net/)
-[![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1.svg?style=for-the-badge&logo=mysql)](https://www.mysql.com/)
-[![Groq AI](https://img.shields.io/badge/AI_5.0-Groq_|_Llama_3.3-orange.svg?style=for-the-badge)](https://groq.com/)
-[![Defense](https://img.shields.io/badge/Defense-Iron_Dome_L7-red.svg?style=for-the-badge)](https://github.com/ronaldllamo26/Incident-Report-Monitoring-System)
-
-**QC-ALERTO** is a high-performance, secure, and real-time incident management ecosystem built for **Quezon City**. It leverages state-of-the-art AI and multi-tier security to bridge the gap between QCitizens and emergency responders.
-
----
-
-## 🎥 System Demonstration
 <div align="center">
-  <video src="https://github.com/user-attachments/assets/a39d45ba-fe47-40e3-819e-f984a91dde63" controls="controls" style="max-width: 100%;" autoplay muted loop>
-    Your browser does not support the video tag.
-  </video>
+
+**A high-performance, secure, and real-time incident management ecosystem for Quezon City.**
+
+[![PHP v8.2](https://img.shields.io/badge/PHP-8.2-777bb4.svg?style=flat-square&logo=php&logoColor=white)](https://www.php.net/)
+[![MySQL](https://img.shields.io/badge/MySQL-Database-4479A1.svg?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Groq AI](https://img.shields.io/badge/AI_5.0-Groq_|_Llama_3.3-orange.svg?style=flat-square&logo=groq&logoColor=white)](https://groq.com/)
+[![Defense](https://img.shields.io/badge/Defense-Iron_Dome_L7-red.svg?style=flat-square&logo=security&logoColor=white)](https://github.com/ronaldllamo26/Incident-Report-Monitoring-System)
+
+
+https://github.com/user-attachments/assets/8f03cc0b-7940-404b-939d-a83dc300cb13
+
+
 </div>
 
-
 ---
+
+
 
 ## 🏎️ AI 5.0 Hyper-Speed Integration
 The system features **QCitizen AI**, a high-speed assistant powered by the **Groq Llama-3.3-70b** model for zero-latency intelligence.
