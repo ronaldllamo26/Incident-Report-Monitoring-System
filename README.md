@@ -10,15 +10,12 @@
 ---
 
 ## 🎥 System Demonstration
-
-
-
-Uploading QC-ALERTO (1).mp4…
-
-
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/8f03cc0b-7940-404b-939d-a83dc300cb13" controls="controls" style="max-width: 100%;" autoplay muted loop>
+  </video>
+</div>
 
 ---
-
 
 ## 🏎️ AI 5.0 Hyper-Speed Integration
 The system features **QCitizen AI**, a high-speed assistant powered by the **Groq Llama-3.3-70b** model for zero-latency intelligence.
