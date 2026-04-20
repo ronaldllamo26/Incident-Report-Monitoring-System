@@ -509,7 +509,7 @@ if ($curSt === 'closed') {
             <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">
                 Na-resolve na ang iyong report. Paano mo i-rate ang response ng aming responder?
             </p>
-            <form action="/irms/ajax/submit_feedback.php" method="POST">
+            <form id="rateForm">
                 <?= csrf_field() ?>
                 <input type="hidden" name="incident_id" value="<?= $id ?>">
                 <div class="d-flex gap-1 mb-3" id="star-row">
@@ -679,6 +679,39 @@ function pickStar(n) {
     selectedStar=n; hlStars(n);
     document.getElementById('r'+n).checked=true;
 }
+
+// AJAX Submission
+document.getElementById('rateForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('.btn-submit-rate');
+    const originalBtnHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Isinusumite...';
+
+    const formData = new FormData(this);
+    fetch('/irms/ajax/submit_feedback.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Success: Reload to show the rating
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+        }
+    })
+    .catch(err => {
+        console.error('Error submitting feedback:', err);
+        alert('Nagkaroon ng problema sa pag-submit. Pakisubukang muli.');
+        btn.disabled = false;
+        btn.innerHTML = originalBtnHtml;
+    });
+});
 </script>
 </body>
 </html>

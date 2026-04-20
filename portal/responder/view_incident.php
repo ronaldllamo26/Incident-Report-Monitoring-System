@@ -36,22 +36,12 @@ $error   = $_GET['error']   ?? '';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/irms/assets/css/theme-responder.css" rel="stylesheet">
+    <script src="/irms/assets/js/theme-responder.js"></script>
     <style>
-        :root {
-            --qc-blue:   #0f172a;
-            --qc-navy:   #1e293b;
-            --qc-accent: #3b82f6;
-            --qc-gold:   #fbbf24;
-            --qc-red:    #ef4444;
-            --glass:     rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-dim:  #94a3b8;
-        }
-
         body {
             font-family: 'Outfit', sans-serif;
-            background: #0f172a;
+            background: var(--bg-gradient);
             color: var(--text-main);
             margin: 0;
             padding-bottom: 50px;
@@ -164,6 +154,10 @@ $error   = $_GET['error']   ?? '';
     </a>
     <div class="d-flex align-items-center gap-4">
         <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+        <button class="theme-toggle-btn border-0 p-0" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="background:transparent; color: var(--text-dim);">
+            <i class="bi bi-moon-stars-fill dark-only"></i>
+            <i class="bi bi-sun-fill light-only"></i>
+        </button>
         <div style="font-size: 13px; font-weight: 600; color: var(--qc-gold);">
             <i class="bi bi-shield-fill-check me-1"></i> Active Deployment
         </div>
@@ -352,8 +346,31 @@ $error   = $_GET['error']   ?? '';
 <script>
 <?php if ($incident['latitude'] && $incident['longitude']): ?>
     var map = L.map('map', { zoomControl: false }).setView([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>], 16);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '© CARTO' }).addTo(map);
+    
+    // Fix marker icon issue
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+    });
+
+    const darkTiles = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    const lightTiles = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    
+    let currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    let tileLayer = L.tileLayer(currentTheme === 'dark' ? darkTiles : lightTiles, { 
+        attribution: '© CARTO' 
+    }).addTo(map);
+
     L.marker([<?= $incident['latitude'] ?>, <?= $incident['longitude'] ?>]).addTo(map);
+
+    window.addEventListener('themeChanged', function(e) {
+        map.removeLayer(tileLayer);
+        tileLayer = L.tileLayer(e.detail.theme === 'dark' ? darkTiles : lightTiles, { 
+            attribution: '© CARTO' 
+        }).addTo(map);
+    });
 <?php endif; ?>
 
     const fileInput = document.getElementById('file-input');

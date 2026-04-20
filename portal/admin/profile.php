@@ -64,6 +64,10 @@ $sidebar_include = $is_admin ? __DIR__ . '/../../includes/sidebar_admin.php' : _
     <title>My Profile — QC-ALERTO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <?php if (!$is_admin): ?>
+        <link href="/irms/assets/css/theme-responder.css" rel="stylesheet">
+        <script src="/irms/assets/js/theme-responder.js"></script>
+    <?php endif; ?>
     <?php include __DIR__ . '/../../includes/sidebar_style.php'; ?>
     <style>
         .profile-card {
@@ -93,20 +97,27 @@ $sidebar_include = $is_admin ? __DIR__ . '/../../includes/sidebar_admin.php' : _
         .input-p:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); outline: none; }
     </style>
 </head>
-<body class="bg-light">
+<body class="bg-light <?= $is_admin ? 'admin-view' : 'responder-view' ?>">
 <div class="d-flex">
     <?php 
     if ($is_admin) {
         include __DIR__ . '/../../includes/sidebar_admin.php'; 
     } else {
-        // For responders, they have a custom sidebar in their dashboard, but for this page we'll use a simplified version
-        // or just a back button.
+        include __DIR__ . '/../../portal/responder/sidebar_responder_shim.php';
     }
     ?>
-    <div class="main-content" style="<?= !$is_admin ? 'margin-left:0; width:100%;' : '' ?>">
+    <div class="main-content">
         <div class="top-nav">
-            <h6 class="fw-semibold mb-0"><?= $is_admin ? 'Account Management' : 'Responder Profile' ?></h6>
-            <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+            <h6 class="top-nav-title"><?= $is_admin ? 'Account Management' : 'Responder Profile' ?></h6>
+            <div class="d-flex align-items-center gap-3">
+                <?php include __DIR__ . '/../../includes/notification_bell.php'; ?>
+                <?php if (!$is_admin): ?>
+                    <button class="theme-toggle-btn border-0 p-0" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="background:transparent; color: var(--text-dim);">
+                        <i class="bi bi-moon-stars-fill dark-only"></i>
+                        <i class="bi bi-sun-fill light-only"></i>
+                    </button>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div class="container py-5">

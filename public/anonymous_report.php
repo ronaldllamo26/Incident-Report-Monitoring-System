@@ -205,13 +205,21 @@ $error = $_GET['error'] ?? '';
                                 placeholder="Maikling paglalarawan ng insidente" required>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium">
+                                Detalyadong Paglalarawan <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="description" class="form-control" rows="4"
+                                placeholder="Ilarawan ang nangyari nang detalyado — ano, sino, kailan, paano..." required></textarea>
+                        </div>
+
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-medium d-flex justify-content-between align-items-center w-100">
                                     <span>Kategorya <span class="text-danger">*</span></span>
                                     <span id="ai-suggestion-badge" style="display:none;"></span>
                                 </label>
-                                <select name="category_id" class="form-select" required>
+                                <select name="category_id" class="form-select" onchange="checkDuplicate()" required>
                                     <option value="">-- Pumili ng kategorya --</option>
                                     <?php foreach ($cats as $c): ?>
                                         <option value="<?= $c['id'] ?>">
@@ -234,13 +242,7 @@ $error = $_GET['error'] ?? '';
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">
-                                Detalyadong Paglalarawan <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="description" class="form-control" rows="4"
-                                placeholder="Ilarawan ang nangyari nang detalyado — ano, sino, kailan, paano..." required></textarea>
-                        </div>
+                        <div id="realtime-dup-warning"></div>
 
                         <!-- Location search -->
                         <div class="mb-3">
@@ -710,6 +712,55 @@ function previewImages(event) {
     });
 }
 
+// ═══════════════════════════════════════════════════════
+//  DUPLICATE DETECTION
+// ═══════════════════════════════════════════════════════
+var dupCheckTimer = null;
+
+function checkDuplicate() {
+    var lat = document.getElementById('latitude').value;
+    var lng = document.getElementById('longitude').value;
+    var cat = document.querySelector('[name="category_id"]').value;
+    if (!lat || !lng || !cat) return;
+
+    clearTimeout(dupCheckTimer);
+    dupCheckTimer = setTimeout(function() {
+        fetch('/irms/ajax/check_duplicate.php', {
+            method:'POST',
+            headers:{
+                'Content-Type':'application/x-www-form-urlencoded',
+                'X-CSRF-TOKEN': document.querySelector('[name="csrf_token"]').value
+            },
+            body:'lat='+lat+'&lng='+lng+'&category='+cat
+        })
+        .then(function(r){return r.json();})
+        .then(function(data){
+            var warnEl = document.getElementById('realtime-dup-warning');
+            if (!data.duplicate) {
+                warnEl.classList.remove('show');
+                warnEl.innerHTML = '';
+                return;
+            }
+            var inc = data.incident;
+            warnEl.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">' +
+                '<i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:16px;flex-shrink:0;"></i>' +
+                '<strong style="color:#92400e;">May katulad na report na — '+inc.distance_meters+'m ang layo</strong>' +
+                '</div>' +
+                '<div style="color:#78350f;margin-bottom:4px;">' +
+                '<strong>'+inc.title+'</strong> <span style="font-size:11px;background:#fef3c7;color:#d97706;padding:2px 6px;border-radius:3px;font-weight:600;">'+inc.status.replace('_',' ')+'</span>' +
+                '</div>' +
+                '<div style="font-size:12px;color:#92400e;margin-bottom:8px;">' +
+                '<i class="bi bi-hash"></i> '+inc.tracking_number+' &nbsp;|&nbsp; '+
+                '<i class="bi bi-clock"></i> '+inc.created_at +
+                '</div>' +
+                '<div style="font-size:12px;color:#78350f;">Baka duplicate ito. I-check muna bago mag-submit.</div>';
+            warnEl.classList.add('show');
+        })
+        .catch(function(){});
+    }, 800);
+}
+
 // ── FORM SUBMIT VALIDATION ─────────────────────────────
 document.getElementById('report-form').addEventListener('submit', function(e) {
     var lat = document.getElementById('latitude').value;
@@ -738,19 +789,29 @@ if (typeof QCAlertAI !== 'undefined') {
     const sevSelect  = document.querySelector('select[name="severity"]');
     const aiBadge    = document.getElementById('ai-suggestion-badge');
     const locBadge   = document.getElementById('ai-location-badge');
+    const dupWarning = document.getElementById('realtime-dup-warning');
+
+    const urgencyAlert = document.createElement('div');
+    urgencyAlert.id = 'ai-urgency-alert';
+    urgencyAlert.className = 'alert alert-danger py-2 px-3 mt-3 small mb-0 d-none';
+    urgencyAlert.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill fs-6"></i><div><strong>AI Emergency Detection:</strong> Napansin naming seryoso ang insidenteng ito. In-adjust namin ang severity sa <strong>Critical</strong>.</div></div>';
+    if (dupWarning) dupWarning.after(urgencyAlert);
 
     async function runAI() {
         const title = titleInput.value.trim();
         const desc  = descInput.value.trim();
 
         if (title.length < 5 || desc.length < 10) {
-            aiBadge.style.display = 'none';
-            locBadge.style.display = 'none';
+            if (aiBadge) aiBadge.style.display = 'none';
+            if (locBadge) locBadge.style.display = 'none';
+            urgencyAlert.classList.add('d-none');
             return;
         }
 
-        aiBadge.innerHTML = '<span class="text-muted" style="font-size:10px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> AI analyzing...</span>';
-        aiBadge.style.display = 'block';
+        if (aiBadge) {
+            aiBadge.innerHTML = '<span class="text-muted" style="font-size:10px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> AI analyzing...</span>';
+            aiBadge.style.display = 'block';
+        }
 
         const data = await ai.analyzeAccurate(title, desc);
 
@@ -760,42 +821,54 @@ if (typeof QCAlertAI !== 'undefined') {
                 // HIGH CONFIDENCE: Auto-select
                 catSelect.value = data.category_id;
                 sevSelect.value = data.severity;
-                aiBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-robot me-1"></i> AI Verified</span>';
+                if (aiBadge) aiBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-robot me-1"></i> AI Verified</span>';
+                if (data.severity === 'critical') urgencyAlert.classList.remove('d-none');
             } else if (conf >= 0.60) {
                 // MEDIUM CONFIDENCE: Suggest
-                aiBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-none" style="font-size:10px;" 
-                    onclick="window.applyAI('${data.category_id}', '${data.severity}')">
-                    <i class="bi bi-lightbulb me-1"></i> Suggestion: ${data.ai_category_name}?
-                </button>`;
+                if (aiBadge) {
+                    aiBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-none" style="font-size:10px;" 
+                        onclick="window.applyAI('${data.category_id}', '${data.severity}')">
+                        <i class="bi bi-lightbulb me-1"></i> Suggestion: ${data.ai_category_name}?
+                    </button>`;
+                }
+                urgencyAlert.classList.add('d-none');
             } else {
-                aiBadge.style.display = 'none';
+                if (aiBadge) aiBadge.style.display = 'none';
             }
         } else {
-            aiBadge.style.display = 'none';
+            if (aiBadge) aiBadge.style.display = 'none';
         }
 
         // ── Location Suggestion ──
         if (data && data.location_suggestion && data.confidence_location >= 0.70) {
-            locBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-success fw-bold text-decoration-none" style="font-size:10px;" 
-                onclick="window.searchByAI('${data.location_suggestion}')">
-                <i class="bi bi-geo-alt-fill me-1"></i> Auto-pin to: ${data.location_suggestion}?
-            </button>`;
-            locBadge.style.display = 'block';
+            if (locBadge) {
+                locBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-success fw-bold text-decoration-none" style="font-size:10px;" 
+                    onclick="window.searchByAI('${data.location_suggestion}')">
+                    <i class="bi bi-geo-alt-fill me-1"></i> Auto-pin to: ${data.location_suggestion}?
+                </button>`;
+                locBadge.style.display = 'block';
+            }
         } else {
-            locBadge.style.display = 'none';
+            if (locBadge) locBadge.style.display = 'none';
         }
     }
 
     window.applyAI = function(cid, sev) {
         catSelect.value = cid;
         sevSelect.value = sev;
-        aiBadge.innerHTML = '<span class="badge bg-info text-dark" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> AI Applied</span>';
+        if (aiBadge) aiBadge.innerHTML = '<span class="badge bg-info text-dark" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> AI Applied</span>';
+        if (sev === 'critical') urgencyAlert.classList.remove('d-none');
+        if (typeof checkDuplicate === 'function') checkDuplicate();
     };
 
     window.searchByAI = function(query) {
-        document.getElementById('search-input').value = query;
-        searchLocation();
-        locBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> Pinning...</span>';
+        const sInput = document.getElementById('search-input');
+        if (sInput) {
+            sInput.value = query;
+            if (typeof handleSearch === 'function') handleSearch();
+            else if (typeof searchLocation === 'function') searchLocation();
+            if (locBadge) locBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> Pinning...</span>';
+        }
     };
 
     [titleInput, descInput].forEach(el => {

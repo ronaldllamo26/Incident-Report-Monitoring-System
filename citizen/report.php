@@ -219,11 +219,22 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                                 placeholder="Maikling paglalarawan ng insidente" required>
                         </div>
 
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium">
+                                Detalyadong Paglalarawan <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="description" class="form-control" rows="4"
+                                placeholder="Ilarawan ang nangyari nang detalyado..."
+                                required></textarea>
+                        </div>
+
                         <!-- Category + Severity -->
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-medium">
-                                    Kategorya <span class="text-danger">*</span>
+                                <label class="form-label small fw-medium d-flex justify-content-between align-items-center w-100">
+                                    <span>Kategorya <span class="text-danger">*</span></span>
+                                    <span id="ai-suggestion-badge" style="display:none;"></span>
                                 </label>
                                 <select name="category_id" class="form-select"
                                         onchange="checkDuplicate()" required>
@@ -251,16 +262,6 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 
                         <!-- Realtime duplicate warning — lalabas dito -->
                         <div id="realtime-dup-warning"></div>
-
-                        <!-- Description -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">
-                                Detalyadong Paglalarawan <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="description" class="form-control" rows="4"
-                                placeholder="Ilarawan ang nangyari nang detalyado..."
-                                required></textarea>
-                        </div>
 
                         <!-- Location search -->
                         <div class="mb-3">
@@ -734,86 +735,98 @@ document.getElementById('report-form').addEventListener('submit', function(e) {
 // Initialize AI Assistant with safety checks
 if (typeof QCAlertAI !== 'undefined') {
     const ai = new QCAlertAI();
+    let aiTimeout = null;
     const titleInput = document.querySelector('input[name="title"]');
-    const descInput = document.querySelector('textarea[name="description"]');
+    const descInput  = document.querySelector('textarea[name="description"]');
     const catSelect  = document.querySelector('select[name="category_id"]');
     const sevSelect  = document.querySelector('select[name="severity"]');
     const aiBadge    = document.getElementById('ai-suggestion-badge');
     const locBadge   = document.getElementById('ai-location-badge');
     const dupWarning = document.getElementById('realtime-dup-warning');
 
-    if (titleInput && descInput && catSelect && sevSelect) {
-        // UI Elements for AI
-        const aiBadge = document.createElement('div');
-        aiBadge.id = 'ai-suggestion-badge';
-        aiBadge.style.cssText = 'display:none;font-size:11px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:4px 10px;border-radius:6px;margin-top:6px;font-weight:600;align-items:center;gap:6px;';
-        catSelect.parentNode.appendChild(aiBadge);
+    const urgencyAlert = document.createElement('div');
+    urgencyAlert.id = 'ai-urgency-alert';
+    urgencyAlert.className = 'alert alert-danger py-2 px-3 mt-3 small mb-0 d-none';
+    urgencyAlert.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill fs-6"></i><div><strong>AI Emergency Detection:</strong> Napansin naming seryoso ang insidenteng ito. In-adjust namin ang severity sa <strong>Critical</strong>.</div></div>';
+    if (dupWarning) dupWarning.after(urgencyAlert);
 
-        const urgencyAlert = document.createElement('div');
-        urgencyAlert.id = 'ai-urgency-alert';
-        urgencyAlert.className = 'alert alert-danger py-2 px-3 mt-3 small mb-0 d-none';
-        urgencyAlert.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="bi bi-exclamation-triangle-fill fs-6"></i><div><strong>AI Emergency Detection:</strong> Napansin naming seryoso ang insidenteng ito. In-adjust namin ang severity sa <strong>Critical</strong>.</div></div>';
-        if (dupWarning) dupWarning.after(urgencyAlert);
+    async function runAI() {
+        const title = titleInput.value.trim();
+        const desc  = descInput.value.trim();
 
-        let aiTimeout = null;
+        if (title.length < 5 || desc.length < 10) {
+            if (aiBadge) aiBadge.style.display = 'none';
+            if (locBadge) locBadge.style.display = 'none';
+            urgencyAlert.classList.add('d-none');
+            return;
+        }
 
-        async function runAI() {
-            const title = titleInput.value.trim();
-            const desc  = descInput.value.trim();
-
-            if (title.length < 5 || desc.length < 10) {
-                aiBadge.style.display = 'none';
-                locBadge.style.display = 'none';
-                return;
-            }
-
+        if (aiBadge) {
             aiBadge.innerHTML = '<span class="text-muted" style="font-size:10px;"><div class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></div> AI analyzing...</span>';
             aiBadge.style.display = 'block';
+        }
 
-            const data = await ai.analyzeAccurate(title, desc);
+        const data = await ai.analyzeAccurate(title, desc);
 
-            if (data && data.category_id) {
-                const conf = data.confidence;
-                if (conf >= 0.85) {
-                    // HIGH CONFIDENCE: Auto-select
-                    catSelect.value = data.category_id;
-                    sevSelect.value = data.severity;
-                    aiBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-robot me-1"></i> AI Verified</span>';
-                } else if (conf >= 0.60) {
-                    // MEDIUM CONFIDENCE: Suggest
+        if (data && data.category_id) {
+            const conf = data.confidence;
+            if (conf >= 0.85) {
+                // HIGH CONFIDENCE: Auto-select
+                catSelect.value = data.category_id;
+                sevSelect.value = data.severity;
+                if (aiBadge) aiBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-robot me-1"></i> AI Verified</span>';
+                if (data.severity === 'critical') urgencyAlert.classList.remove('d-none');
+            } else if (conf >= 0.60) {
+                // MEDIUM CONFIDENCE: Suggest
+                if (aiBadge) {
                     aiBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-primary fw-bold text-decoration-none" style="font-size:10px;" 
                         onclick="window.applyAI('${data.category_id}', '${data.severity}')">
                         <i class="bi bi-lightbulb me-1"></i> Suggestion: ${data.ai_category_name}?
                     </button>`;
-                } else {
-                    aiBadge.style.display = 'none';
                 }
+                urgencyAlert.classList.add('d-none');
             } else {
-                aiBadge.style.display = 'none';
+                if (aiBadge) aiBadge.style.display = 'none';
             }
+        } else {
+            if (aiBadge) aiBadge.style.display = 'none';
+        }
 
-            // ── Location Suggestion ──
-            if (data && data.location_suggestion && data.confidence_location >= 0.70) {
+        // ── Location Suggestion ──
+        if (data && data.location_suggestion && data.confidence_location >= 0.70) {
+            if (locBadge) {
                 locBadge.innerHTML = `<button type="button" class="btn btn-link p-0 text-success fw-bold text-decoration-none" style="font-size:10px;" 
                     onclick="window.searchByAI('${data.location_suggestion}')">
                     <i class="bi bi-geo-alt-fill me-1"></i> Auto-pin to: ${data.location_suggestion}?
                 </button>`;
                 locBadge.style.display = 'block';
-            } else {
-                locBadge.style.display = 'none';
             }
+        } else {
+            if (locBadge) locBadge.style.display = 'none';
         }
-
-        window.applyAI = function(cid, sev) {
-            categorySelect.value = cid;
-            severitySelect.value = sev;
-            aiBadge.innerHTML = '<span class="badge bg-info text-dark"><i class="bi bi-check-circle me-1"></i> AI Applied</span>';
-            if (sev === 'critical') urgencyAlert.classList.remove('d-none');
-        };
-
-        titleInput.addEventListener('input', () => { clearTimeout(aiTimeout); aiTimeout = setTimeout(runAI, 1500); });
-        descInput.addEventListener('input', () => { clearTimeout(aiTimeout); aiTimeout = setTimeout(runAI, 1500); });
     }
+
+    window.applyAI = function(cid, sev) {
+        catSelect.value = cid;
+        sevSelect.value = sev;
+        if (aiBadge) aiBadge.innerHTML = '<span class="badge bg-info text-dark" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> AI Applied</span>';
+        if (sev === 'critical') urgencyAlert.classList.remove('d-none');
+        if (typeof checkDuplicate === 'function') checkDuplicate();
+    };
+
+    window.searchByAI = function(query) {
+        const sInput = document.getElementById('search-input');
+        if (sInput) {
+            sInput.value = query;
+            if (typeof handleSearch === 'function') handleSearch();
+            else if (typeof searchLocation === 'function') searchLocation();
+            if (locBadge) locBadge.innerHTML = '<span class="badge bg-success" style="font-size:10px;"><i class="bi bi-check-circle me-1"></i> Pinning...</span>';
+        }
+    };
+
+    [titleInput, descInput].forEach(el => {
+        el.addEventListener('input', () => { clearTimeout(aiTimeout); aiTimeout = setTimeout(runAI, 1500); });
+    });
 }
 </script>
 </body>

@@ -25,24 +25,23 @@
     </button>
 
     <!-- Dropdown panel -->
-    <div id="notif-dropdown"
+    <div id="notif-dropdown" class="notif-dropdown shadow-lg"
          style="display:none;
                 position:absolute;
                 right:0;
                 top:calc(100% + 8px);
                 width:340px;
-                background:#fff;
-                border:1px solid #e2e8f0;
+                background: var(--notif-bg, #fff);
+                border:1px solid var(--notif-border, #e2e8f0);
                 border-radius:12px;
-                box-shadow:0 8px 32px rgba(0,0,0,0.12);
                 z-index:999999 !important;
                 transform: translateZ(999999px);
                 overflow:hidden;">
 
         <!-- Header -->
-        <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;
+        <div style="padding:12px 16px;border-bottom:1px solid var(--notif-border, #f1f5f9);
                     display:flex;align-items:center;justify-content:space-between;">
-            <div style="font-size:14px;font-weight:700;color:#1e293b;">
+            <div style="font-size:14px;font-weight:700;color: var(--notif-text, #1e293b);">
                 <i class="bi bi-bell me-1"></i> Notifications
             </div>
             <button onclick="markAllRead()"
@@ -76,18 +75,18 @@
 <style>
 .notif-item {
     padding: 12px 16px;
-    border-bottom: 1px solid #f8fafc;
+    border-bottom: 1px solid var(--notif-border, #f8fafc);
     cursor: pointer;
     transition: background 0.15s;
     display: flex;
     gap: 10px;
     align-items: flex-start;
     text-decoration: none;
-    color: inherit;
+    color: var(--notif-text, inherit);
 }
-.notif-item:hover { background: #f8fafc; }
-.notif-item.unread { background: #eff6ff; }
-.notif-item.unread:hover { background: #dbeafe; }
+.notif-item:hover { background: var(--notif-hover, #f8fafc); }
+.notif-item.unread { background: var(--notif-unread, #eff6ff); }
+.notif-item.unread:hover { background: var(--notif-unread-hover, #dbeafe); }
 .notif-icon {
     width: 36px; height: 36px;
     border-radius: 50%;

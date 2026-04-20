@@ -261,6 +261,16 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                                 placeholder="Maikling paglalarawan ng insidente" required>
                         </div>
 
+                        <!-- Description -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-medium">
+                                Detalyadong Paglalarawan <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="description" class="form-control" rows="4"
+                                placeholder="Ilarawan ang nangyari nang detalyado — ano, sino, kailan, paano..."
+                                required></textarea>
+                        </div>
+
                         <!-- Category + Severity -->
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
@@ -268,7 +278,6 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
                                     <span>Kategorya <span class="text-danger">*</span></span>
                                     <span id="ai-suggestion-badge" style="display:none;"></span>
                                 </label>
-                                <!-- DAGDAG: onchange="checkDuplicate()" -->
                                 <select name="category_id" class="form-select"
                                         onchange="checkDuplicate()" required>
                                     <option value="">-- Pumili ng kategorya --</option>
@@ -295,16 +304,6 @@ $dupLocation   = htmlspecialchars($_GET['dup_location'] ?? '');
 
                         <!-- Realtime duplicate warning — lalabas dito -->
                         <div id="realtime-dup-warning"></div>
-
-                        <!-- Description -->
-                        <div class="mb-3">
-                            <label class="form-label small fw-medium">
-                                Detalyadong Paglalarawan <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="description" class="form-control" rows="4"
-                                placeholder="Ilarawan ang nangyari nang detalyado — ano, sino, kailan, paano..."
-                                required></textarea>
-                        </div>
 
                         <!-- Location search -->
                         <div class="mb-3">

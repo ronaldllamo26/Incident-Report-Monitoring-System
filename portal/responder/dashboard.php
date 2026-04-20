@@ -44,22 +44,12 @@ $stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' =
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/irms/assets/css/theme-responder.css" rel="stylesheet">
+    <script src="/irms/assets/js/theme-responder.js"></script>
     <style>
-        :root {
-            --qc-blue:   #0f172a;
-            --qc-navy:   #1e293b;
-            --qc-accent: #3b82f6;
-            --qc-gold:   #fbbf24;
-            --qc-red:    #ef4444;
-            --glass:     rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.1);
-            --text-main: #f8fafc;
-            --text-dim:  #94a3b8;
-        }
-
         body {
             font-family: 'Outfit', sans-serif;
-            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            background: var(--bg-gradient);
             color: var(--text-main);
             min-height: 100vh;
             margin: 0;
@@ -197,39 +187,7 @@ $stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' =
 </head>
 <body>
 
-<!-- Sidebar -->
-<aside class="sidebar">
-    <div class="brand-box">
-        <img src="/irms/assets/img/QC_LOGO_CIRCLE.png" alt="QC">
-        <span class="brand-name">QC-ALERTO</span>
-    </div>
-
-    <ul class="nav-menu">
-        <li class="nav-item">
-            <a href="/irms/portal/responder/dashboard.php" class="nav-link-c active">
-                <i class="bi bi-grid-fill"></i> Command Center
-            </a>
-        </li>
-        <li class="nav-item">
-            <a href="/irms/portal/responder/profile.php" class="nav-link-c">
-                <i class="bi bi-person-fill"></i> My Profile
-            </a>
-        </li>
-        <li class="nav-item mt-4">
-            <a href="/irms/controllers/AuthController.php?action=logout" class="nav-link-c" style="color: var(--qc-red);">
-                <i class="bi bi-box-arrow-right"></i> Sign Out
-            </a>
-        </li>
-    </ul>
-
-    <div style="position: absolute; bottom: 24px; left: 24px; right: 24px;">
-        <div class="glass-panel" style="padding: 16px; border-radius: 16px; background: rgba(255,255,255,0.05);">
-            <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Responder</div>
-            <div style="font-size: 14px; font-weight: 700;"><?= htmlspecialchars($user['name']) ?></div>
-            <div style="font-size: 11px; color: var(--text-dim);"><?= date('M d, Y') ?></div>
-        </div>
-    </div>
-</aside>
+<?php include __DIR__ . '/../../includes/sidebar_responder.php'; ?>
 
 <main class="main-content">
     <div class="dashboard-header">
@@ -242,6 +200,11 @@ $stLabel = ['pending' => 'Pending', 'in_progress' => 'In Progress', 'resolved' =
             <div style="width: 1px; height: 20px; background: var(--glass-border); margin: 0 10px;"></div>
             <div class="pulse-dot"></div>
             <span id="current-time">00:00:00 AM</span>
+            <div style="width: 1px; height: 20px; background: var(--glass-border); margin: 0 10px;"></div>
+            <button class="theme-toggle-btn border-0 p-0" onclick="toggleTheme()" title="Toggle Dark/Light Mode" style="background:transparent; color: var(--text-dim);">
+                <i class="bi bi-moon-stars-fill dark-only"></i>
+                <i class="bi bi-sun-fill light-only"></i>
+            </button>
         </div>
     </div>
 
