@@ -1,7 +1,4 @@
 
-
-https://github.com/user-attachments/assets/b289a9bc-20ad-4db8-aa8e-d4cbfb56f1fd
-
 # 🚨 QC-ALERTO: Incident Report & Monitoring System (IRMS) 
 
 <div align="center">
@@ -13,8 +10,8 @@ https://github.com/user-attachments/assets/b289a9bc-20ad-4db8-aa8e-d4cbfb56f1fd
 [![Groq AI](https://img.shields.io/badge/AI_5.0-Groq_|_Llama_3.3-orange.svg?style=flat-square&logo=groq&logoColor=white)](https://groq.com/)
 [![Defense](https://img.shields.io/badge/Defense-Iron_Dome_L7-red.svg?style=flat-square&logo=security&logoColor=white)](https://github.com/ronaldllamo26/Incident-Report-Monitoring-System)
 
+https://github.com/user-attachments/assets/b289a9bc-20ad-4db8-aa8e-d4cbfb56f1fd
 
-https://github.com/user-attachments/assets/8f03cc0b-7940-404b-939d-a83dc300cb13
 
 
 </div>
